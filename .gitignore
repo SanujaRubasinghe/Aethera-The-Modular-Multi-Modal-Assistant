@@ -1,0 +1,108 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+pip-wheel-metadata/
+wheels/
+*.manifest
+*.spec
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+tests/__pycache__/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IDEs
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Environments
+.env
+.venv/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Python virtualenvs
+venv/
+ENV/
+env/
+.venv/
+
+# MyPy
+.mypy_cache/
+
+# Pyre
+.pyre/
+
+# PyTorch / TensorFlow / Model weights
+*.pt
+*.pth
+*.ckpt
+*.tflite
+*.onnx
+
+# Audio files / large data
+*.wav
+*.mp3
+*.flac
+*.m4a
+*.ogg
+*.npy
+
+# Logs
+*.log
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Misc
+*.bak
+*.swp
+*.tmp

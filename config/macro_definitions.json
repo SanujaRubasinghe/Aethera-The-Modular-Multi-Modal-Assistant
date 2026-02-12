@@ -1,0 +1,58 @@
+{
+  "macros": {
+    "morning_routine": {
+      "description": "My morning startup routine",
+      "enabled": true,
+      "mode": "sequential",
+      "rollback_on_error": false,
+      "intents": [
+        {
+          "name": "OPEN_APP",
+          "slots": {
+            "app_name": "whatsapp"
+          }
+        },
+        {
+          "name": "OPEN_APP",
+          "slots": {
+            "app_name": "vscode",
+            "exePath": "C:/Users/${username}/AppData/Local/Programs/Microsoft VS Code/Code.exe"
+          }
+        },
+        {
+          "name": "GET_WEATHER",
+          "slots": {
+            "city": "Colombo"
+          }
+        }
+      ]
+    },
+    "set_work_station": {
+      "description": "Setup my workstation for coding",
+      "enabled": true,
+      "mode": "parallel",
+      "intents": [
+        {
+          "name": "OPEN_APP",
+          "slots": {
+            "app_name": "vscode",
+            "exePath": "C:/Users/${username}/AppData/Local/Programs/Microsoft VS Code/Code.exe"
+          }
+        },
+        {
+          "name": "OPEN_APP",
+          "slots": {
+            "app_name": "terminal",
+            "exePath": "wt.exe"
+          }
+        },
+        {
+          "name": "SET_VOLUME",
+          "slots": {
+            "level": "30"
+          }
+        }
+      ]
+    }
+  }
+}
