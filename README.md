@@ -36,33 +36,33 @@
 
 ```mermaid
 graph TB
-    subgraph Input Layer
+    subgraph InputLayer ["Input Layer"]
         Mic[Microphone] --> STT[Whisper STT]
         Cam[Camera] --> CM[Camera Manager]
     end
 
-    subgraph Vision Layer
+    subgraph VisionLayer ["Vision Layer"]
         CM --> FR[Face Recognizer]
         CM --> GC[Gesture Controller]
         CM --> IL[Intrusion Logger]
     end
 
-    subgraph Core
+    subgraph CoreLayer ["Core"]
         STT -->|Intent| CC[Central Controller]
         GC -->|Intent| CC
         FR -->|Auth State| CC
         CC --> TD[Task Dispatcher]
     end
 
-    subgraph Output Layer
+    subgraph OutputLayer ["Output Layer"]
         TD --> Handlers[Modular Handlers]
         Handlers -->|Webhook| n8n[n8n Automation]
         Handlers -->|TTS| NeuralTTS[Neural TTS]
         Handlers -->|UI| Vis[Particle Sphere UI]
     end
 
-    S[AssistantState] --- Core
-    S --- Vision Layer
+    S[AssistantState] --- CoreLayer
+    S --- VisionLayer
 ```
 
 ---
