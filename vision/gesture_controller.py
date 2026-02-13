@@ -5,27 +5,39 @@ import json
 import os
 import cv2
 import mediapipe as mp
+from mediapipe.tasks.python import vision
+from mediapipe.tasks import python
+import numpy as np
 from typing import Optional, Dict, Any
 from vision.camera_manager import CameraManager
 from vision.gesture_classifier import GestureClassifier
 from intent.intent_classifier import Intent
 from config.constants import GESTURE_DEBOUNCE_MS
 
-class GestureController:
-    def __init__(self, camera: CameraManager, intent_queue: queue.Queue, shutdown_event: threading.Event):
+from state.assistant_state import AssistantState
+
+class GestureController(threading.Thread):
+    def __init__(self, camera: CameraManager, state: AssistantState, intent_queue: queue.Queue, shutdown_event: threading.Event):
+        super().__init__(daemon=True)
         self.camera = camera
+        self.state = state
         self.intent_queue = intent_queue
         self.shutdown_event = shutdown_event
         self.classifier = GestureClassifier()
+        self.model_path = "./vision/gesture_model/hand_landmarker.task"
         
         # MediaPipe initialization
-        self.mp_hands = mp.solutions.hands
-        self.hands = self.mp_hands.Hands(
-            static_image_mode=False,
-            max_num_hands=2,
-            min_detection_confidence=0.7,
-            min_tracking_confidence=0.5
+        base_options = python.BaseOptions(model_asset_path=self.model_path)
+        options = vision.HandLandmarkerOptions(
+            base_options=base_options,
+            running_mode=vision.RunningMode.LIVE_STREAM,
+            num_hands=2,
+            min_hand_detection_confidence=0.7,
+            min_hand_presence_confidence=0.7,
+            min_tracking_confidence=0.7,
+            result_callback=self._internal_callback
         )
+        self.hands = vision.HandLandmarker.create_from_options(options)
         
         # Configuration
         self.mappings = self._load_mappings()
@@ -34,6 +46,9 @@ class GestureController:
         self.last_gesture: Optional[str] = None
         self.gesture_start_time = 0
         self.prev_landmarks = None
+    
+    def _internal_callback(self):
+        pass
 
     def _load_mappings(self) -> Dict[str, Any]:
         mapping_path = "config/gesture_mappings.json"
@@ -42,21 +57,26 @@ class GestureController:
                 return json.load(f)
         return {}
 
-    def start(self):
-        """Starts the gesture detection callback on the camera manager."""
-        self.camera.register_consumer(self.process_frame)
-        print("GestureController: Started")
+    def run(self):
+        print("GestureController: Thread started")
+        with self.state._lock:
+            self.state.gesture_control_active = True
+        
+        while not self.shutdown_event.is_set():
+            frame = self.camera.get_latest_frame()
+            if frame is None:
+                time.sleep(0.01)
+                continue
 
-    def stop(self):
-        self.camera.unregister_consumer(self.process_frame)
+            self._process_gesture(frame)
+            time.sleep(0.01)
+
+        with self.state._lock:
+            self.state.gesture_control_active = False
         self.hands.close()
-        print("GestureController: Stopped")
+        print("GestureController: Thread stopped")
 
-    def process_frame(self, frame):
-        """Callback from CameraManager."""
-        if self.shutdown_event.is_set():
-            return
-
+    def _process_gesture(self, frame: np.ndarray):
         # Convert to RGB for MediaPipe
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         results = self.hands.process(rgb_frame)
@@ -72,7 +92,7 @@ class GestureController:
                 
                 if gesture:
                     self._handle_gesture(gesture)
-                    break # Handle one hand at a time for now
+                    break # Handle one hand at a time
         else:
             self.last_gesture = None
             self.prev_landmarks = None
@@ -85,8 +105,7 @@ class GestureController:
             duration = current_time - self.gesture_start_time
             if duration >= GESTURE_DEBOUNCE_MS:
                 self._dispatch_gesture_intent(gesture)
-                # Reset start time to avoid rapid repeated firing for static gestures
-                # unless specified otherwise in mapping (e.g. continuous mode)
+                # Reset start time to avoid rapid repeated firing
                 self.gesture_start_time = current_time + 1000 # 1s cooldown
         else:
             self.last_gesture = gesture

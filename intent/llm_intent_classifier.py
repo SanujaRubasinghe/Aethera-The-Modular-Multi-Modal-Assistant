@@ -23,6 +23,9 @@ You have access to the following tools (intents):
 2. **CHAT**: Use this when the user is just chatting or asking a general question that doesn't require an action.
    - `response`: Your textual response to the user.
 
+3. **SYSTEM_HEALTH_CHECK**: Use this when the user asks about the status, health, or performance of the assistant or its modules.
+   - No slots required.
+
 Output strictly JSON. Do not output markdown or explanations.
 Example 1: "Send a message to John saying I'll be late"
 {
@@ -42,6 +45,12 @@ Example 2: "Tell me a joke"
   "slots": {
     "response": "Why did the chicken cross the road? To get to the other side!"
   }
+}
+
+Example 3: "How is the system doing?"
+{
+  "intent": "SYSTEM_HEALTH_CHECK",
+  "slots": {}
 }
 """
 

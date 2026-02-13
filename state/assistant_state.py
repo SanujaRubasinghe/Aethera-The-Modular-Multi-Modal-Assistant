@@ -33,6 +33,19 @@ class AssistantState:
 
         self.monitors = MonitorState()
 
+        self.module_status: Dict[str, bool] = {}
+        
+        # Vision related state
+        self.is_authenticated = False
+        self.pending_intrusion_report = False
+        self.authenticated_user: Optional[str] = None
+        self.face_detection_active = False
+        self.gesture_control_active = False
+
+    def update_module_status(self, module_name: str, status: bool):
+        with self._lock:
+            self.module_status[module_name] = status
+
     def register_app(self, app: AppProcess):
         with self._lock:
             if not app.hwnd:

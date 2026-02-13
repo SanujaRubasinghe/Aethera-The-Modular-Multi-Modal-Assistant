@@ -17,7 +17,12 @@ class SecurityGate:
         """
         Verdict on whether to allow the intent.
         Exempts certain intents like 'WAKE_ASSISTANT' which might be needed for auth.
+        Always allows if the camera is not available to avoid locking out the user.
         """
+        # Safety fallback
+        if not getattr(self.camera, "available", True):
+            return True
+
         # Always allow if authenticated
         if self.state.is_authenticated:
             # Check if we should report previous intrusions
