@@ -12,7 +12,6 @@ class N8NHandler(BaseHandler):
         parameters = intent.slots.get("parameters", {})
         
         if not workflow:
-             # If LLM didn't provide a workflow slug, try to use the raw text or some default
              workflow = "default_voice_assistant"
 
         logging.info(f"Triggering n8n workflow: {workflow} with params: {parameters}")
@@ -27,16 +26,12 @@ class N8NHandler(BaseHandler):
         }
 
         try:
-            # We append the workflow slug to the base URL if needed, 
-            # or just send it as part of the payload to a single entry point webhook.
-            # Strategy: Single Entry Point Webhook that routes based on 'workflow' field.
             response = requests.post(N8N_WEBHOOK_URL, json=payload, timeout=10)
             response.raise_for_status()
             
             data = response.json()
             message = data.get("message", "Workflow executed successfully.")
             
-            # n8n can return a 'speech' field to be spoken
             speech = data.get("speech", message)
             
             return TaskResult(True, message=speech, data=data)

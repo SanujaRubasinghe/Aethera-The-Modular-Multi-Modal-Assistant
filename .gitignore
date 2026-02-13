@@ -1,3 +1,5 @@
+windows_app_alias_cache.json
+windows_app_cache.json
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

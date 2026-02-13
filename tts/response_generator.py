@@ -1,68 +1,65 @@
-import threading
-import queue
-import time
+import requests
 
-class ResponseGenerator(threading.Thread):
-    def __init__(self, intent_queue, response_queue, shutdown_event):
-        super().__init__(daemon=True)
-        self.intent_queue = intent_queue
-        self.response_queue = response_queue
-        self.shutdown_event = shutdown_event
+OLLAMA_URL = "http://localhost:11434/api/generate"
+MODEL_NAME = "gemma3:4b"
 
-    def run(self):
-        print("ResponseGenerator [IDLE]")
-        while not self.shutdown_event.is_set():
-            try:
-                intents = self.intent_queue.get(timeout=0.1)
-            except queue.Empty:
-                continue
+SYSTEM_PROMPT = """
+You are a voice assistant confirmation engine.
 
-            if not intents:
-                continue
-            response, shutdown_triggered = self.generate_response(intents)
+Your task is to confirm the user's requested action before execution.
 
-            if response:
-                self.response_queue.put(response)
+CRITICAL RULES:
+- Output must be plain text only.
+- No markdown.
+- No bullet points.
+- No emojis.
+- No special characters.
+- No role labels.
+- No explanations.
+- No additional commentary.
+- One to three short sentences maximum.
+- Sound natural when spoken by a text-to-speech system.
+- Be concise and confident.
+- Do not invent details that were not provided.
+- If required information is missing, politely ask for clarification in one short sentence.
 
-            if shutdown_triggered:
-                time.sleep(5)
-                self.shutdown_event.set()
+GOAL:
+Restate the user's requested action clearly and confirm it before execution.
 
-            self.intent_queue.task_done()
-        print("ResponseGenerator [SHUTDOWN]")
+FORMAT:
+If action is clear:
+Just to confirm, you want me to <summarized action>. Is that correct?
 
-    def generate_response(self, intents):
-        messages = []
-        shutdown_triggered = False
+If required parameters are missing:
+I need <missing detail> before I proceed.
 
-        for intent in intents:
-            if intent.name == "SHUTDOWN":
-                app = intent.slots.get("app_name", "app")
-                if app == "agent":
-                    messages.append("Shutting down all systems. Goodbye!")
-                    shutdown_triggered = True
+Never output anything else.
+""".strip()
 
-            elif intent.name == "OPEN_APP":
-                app = intent.slots.get("app_name", "app")
-                messages.append(f"Okay, opening {app}")
 
-            elif intent.name == "SEARCH_WEB":
-                query = intent.slots.get("query", "")
-                messages.append(f"Performing a search for {query}")
+def generate_confirmation(intent: str) -> str:
 
-            elif intent.name == "PLAY_MUSIC":
-                song = intent.slots.get("song_name", "music")
-                messages.append(f"Playing {song}")
+    full_prompt = f"{SYSTEM_PROMPT}\n\nUser request:\n{intent}\n\nResponse:"
 
-            elif intent.name == "SET_ALARM":
-                alarm_time = intent.slots.get("time", "the specified time")
-                messages.append(f"Setting an alarm for {alarm_time}")
+    payload = {
+        "model": MODEL_NAME,
+        "prompt": full_prompt,
+        "stream": False,
+        "options": {
+            "temperature": 0.2  
+        }
+    }
 
-            elif intent.name == "GET_WEATHER":
-                city = intent.slots.get("city", "your location")
-                messages.append(f"Fetching the weather for {city}")
+    response = requests.post(OLLAMA_URL, json=payload)
 
-            else:
-                messages.append("I didn’t quite catch that. Could you please repeat?")
+    if response.status_code != 200:
+        raise RuntimeError(f"Ollama error: {response.text}")
 
-        return " ".join(messages), shutdown_triggered
+    result = response.json()
+    return result.get("response", "").strip()
+
+
+if __name__ == "__main__":
+    intent = "Turn off the kitchen lights at 10 PM"
+    confirmation = generate_confirmation(intent)
+    print(confirmation)
