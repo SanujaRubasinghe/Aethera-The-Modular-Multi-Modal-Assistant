@@ -10,6 +10,7 @@ from controllers.central_controller import CentralController
 from controllers.task_dispatcher import TaskDispatcher
 from controllers.handler_loader import load_handlers
 from controllers.permission_manager import PermissionManager
+from vision.camera_manager import CameraManager
 from state.assistant_state import AssistantState
 from state.bootstrap import bootstrap_existing_apps
 import handlers
@@ -18,10 +19,16 @@ import threading
 import time
 import queue
 
+from config.constants import FIRST_BOOT_RESPONSES
+import random
+
 class VoiceAssistant:
     def __init__(self):
         self.intent_queue = queue.Queue()
         self.response_queue = queue.Queue()
+
+        first_boot_response = random.choice(FIRST_BOOT_RESPONSES)
+        self.response_queue.put(first_boot_response)
         
         self.wake_event = threading.Event()
         self.shutdown_event = threading.Event()
@@ -34,6 +41,8 @@ class VoiceAssistant:
         self.dispatcher = TaskDispatcher(self.state, permission_manager=self.permission_manager)
         
         load_handlers(self.dispatcher, handlers)
+
+        self.vision_manager = CameraManager(shutdown_event=self.shutdown_event)
         
         self.wake_detector = WakeWordDetector(wake_event=self.wake_event, shutdown_event=self.shutdown_event, response_queue=self.response_queue)
         self.stt_worker = WhisperSTT(wake_event=self.wake_event, shutdown_event=self.shutdown_event, intent_queue=self.intent_queue, response_queue=self.response_queue)
@@ -54,6 +63,16 @@ class VoiceAssistant:
         wake_thread = threading.Thread(target=self.wake_detector.listen)
         stt_thread = threading.Thread(target=self.stt_worker.listen)
         
+        self.vision_manager.start()
+        
+        # Wait for camera to initialize and check availability
+        self.vision_manager.ready_event.wait(timeout=2.0)
+        if not self.vision_manager.available:
+            self.response_queue.put("Error encountered. Camera module could not be found. All vision-related features are disabled.")
+            self.vision_enabled = False
+        else:
+            self.vision_enabled = True
+
         wake_thread.start()
         stt_thread.start()
         self.tts_worker.start()

@@ -14,21 +14,20 @@ class CameraManager(threading.Thread):
         self._lock = threading.Lock()
         self.latest_frame: Optional[np.ndarray] = None
         self.frame_delay = 1.0 / CAMERA_FPS
+        self.available = False
+        self.ready_event = threading.Event()
 
     def register_consumer(self, callback: Callable[[np.ndarray], None]):
-        """Register a callback function to receive camera frames."""
         with self._lock:
             if callback not in self.frame_callbacks:
                 self.frame_callbacks.append(callback)
 
     def unregister_consumer(self, callback: Callable[[np.ndarray], None]):
-        """Unregister a callback function."""
         with self._lock:
             if callback in self.frame_callbacks:
                 self.frame_callbacks.remove(callback)
 
     def get_latest_frame(self) -> Optional[np.ndarray]:
-        """Get the most recent frame captured."""
         with self._lock:
             if self.latest_frame is not None:
                 return self.latest_frame.copy()
@@ -40,14 +39,20 @@ class CameraManager(threading.Thread):
         
         if not cap.isOpened():
             print("CameraManager: Failed to open camera.")
+            self.available = False
+            self.ready_event.set()
+            print("CameraManager [STOPPED]")
             return
+
+        self.available = True
+        self.ready_event.set()
 
         while not self.shutdown_event.is_set():
             start_time = time.time()
             
             ret, frame = cap.read()
             if ret:
-                # Mirror the frame immediately (most webcams need this for natural interaction)
+                # Mirror the frame 
                 frame = cv2.flip(frame, 1)
                 
                 with self._lock:
