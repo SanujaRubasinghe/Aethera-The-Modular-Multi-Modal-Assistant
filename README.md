@@ -78,7 +78,7 @@ graph TB
 ### Installation
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/aethera.git
+   git clone https://github.com/SanujaRubasinghe/Aethera-The-Modular-Multi-Modal-Assistant.git
    cd aethera/python-client
    ```
 2. Install dependencies:
