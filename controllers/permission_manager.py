@@ -1,42 +1,45 @@
 import threading
 import queue
-from controllers.task_dispatcher import TaskDispatcher
+import time
 
 class PermissionManager:
-    def __init__(self, intent_queue, response_queue):
-        self.intent = intent_queue
-        self.response = response_queue
+    def __init__(self, intent_queue, response_queue, wake_event):
+        self.intent_queue = intent_queue
+        self.response_queue = response_queue
+        self.wake_event = wake_event
         self._lock = threading.Lock()
         self._pending = None
-        self._event = threading.Event()
 
     def request(self, permission_request):
-        with self._lock:
-            self._pending = permission_request
-            self._event.clear()
-
-        self.response.put(permission_request.prompt)
-
-        approved = self._event.wait(timeout=permission_request.timeout)
-
-        if not approved:
-            return False
+        print(f"[PermissionManager] Requesting: {permission_request.prompt}")
         
-        return self._pending is None
-    
-    def resolve(self, intent_name: str):
-        with self._lock:
-            if not self._pending:
+        # Send prompt to TTS
+        self.response_queue.put(permission_request.prompt)
+        
+        # Trigger STT to listen for response
+        self.wake_event.set()
+
+        start_time = time.time()
+        timeout = permission_request.timeout
+
+        while time.time() - start_time < timeout:
+            try:
+                intent = self.intent_queue.get(timeout=1.0)
+                
+                print(f"[PermissionManager] Received intent: {intent.name}")
+
+                if intent.name == "CONFIRM_YES":
+                    return True
+                
+                if intent.name == "CONFIRM_NO":
+                    return False
+                
+                print(f"[PermissionManager] Unexpected intent {intent.name}, putting back in queue.")
+                self.intent_queue.put(intent)
                 return False
-            
-            if intent_name == "CONFIRM_YES":
-                self._pending = None
-                self._event.set()
-                return True
-            
-            if intent_name == "CONFIRM_NO":
-                self._pending = None
-                self._event.set()
-                return False
-            
+                
+            except queue.Empty:
+                continue
+
+        print("[PermissionManager] Request timed out")
         return False

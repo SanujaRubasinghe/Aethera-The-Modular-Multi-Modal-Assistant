@@ -61,11 +61,6 @@ class AssistantState:
             self._set_focus_internal(pid)
         
     def sync_focus_from_os(self):
-        """
-        Sync assistant state with real OS foreground window
-        
-        :param self: Description
-        """
         with self._lock:
             info = get_foreground_window_info()
             if not info:

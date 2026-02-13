@@ -30,7 +30,7 @@ class VoiceAssistant:
         bootstrap_existing_apps(self.state)
         self.state.sync_focus_from_os()
         
-        self.permission_manager = PermissionManager(self.intent_queue, self.response_queue)
+        self.permission_manager = PermissionManager(self.intent_queue, self.response_queue, self.wake_event)
         self.dispatcher = TaskDispatcher(self.state, permission_manager=self.permission_manager)
         
         load_handlers(self.dispatcher, handlers)

@@ -20,7 +20,6 @@ class TaskDispatcher:
         self.handlers[intent_name] = handler
 
     def dispatch(self, intent, response_queue):
-        
         handler = self.handlers.get(intent.name)
         if not handler:
             return TaskResult(False, "Sorry, I don't know how to do that.")

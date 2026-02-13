@@ -26,6 +26,7 @@ class CloseAppHandler(BaseHandler):
         if not target_app:
             return TaskResult(False, "No application available to close")
 
+        print(f'target_app: {target_app}, target_pid: {target_pid}')
         # Safety check
         if may_have_unsaved_data(target_app.name):
             approved = permission_manager.request(
