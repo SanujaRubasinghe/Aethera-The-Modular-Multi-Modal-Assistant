@@ -1,6 +1,8 @@
 windows_app_alias_cache.json
 windows_app_cache.json
 test.py
+vision/face_encodings/
+data/intrusion
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

@@ -63,6 +63,11 @@ class FaceRecognizer(threading.Thread):
         with self.state._lock:
             self.state.face_detection_active = True
         
+        # Check if enrollment is needed
+        if not self.known_encodings:
+            print("FaceRecognizer: No owner data found. Starting enrollment process.")
+            self._perform_enrollment()
+
         while not self.shutdown_event.is_set():
             current_time = time.time()
             if current_time - self.last_check_time < FACE_RECOGNITION_INTERVAL:
@@ -80,6 +85,43 @@ class FaceRecognizer(threading.Thread):
         with self.state._lock:
             self.state.face_detection_active = False
         print("FaceRecognizer: Thread stopped")
+
+    def _perform_enrollment(self):
+        """Guide the user through a one-time face enrollment process."""
+        self.response_queue.put("Hello. I noticed that Face ID has not been set up yet. Let's do that now. Please look directly at the camera and keep a neutral expression.")
+        
+        # Give the user some time to prepare
+        time.sleep(5)
+        
+        captured_frames = []
+        capture_count = 5
+        
+        for i in range(capture_count):
+            if self.shutdown_event.is_set():
+                return
+
+            self.response_queue.put(f"Capturing photo {i+1} of {capture_count}. Hold still.")
+            
+            # Wait for a fresh frame
+            time.sleep(1.5)
+            frame = self.camera.get_latest_frame()
+            if frame is not None:
+                captured_frames.append(frame)
+            else:
+                print(f"FaceRecognizer: Failed to grab frame for enrollment {i+1}")
+
+        if len(captured_frames) >= 3:
+            self.response_queue.put("Thank you. I am now processing your face data. One moment please.")
+            success = self.enroll_owner(captured_frames)
+            if success:
+                self.response_queue.put("Face enrollment successful! I will now recognize you automatically.")
+                with self.state._lock:
+                    self.state.is_authenticated = True
+                self.last_auth_time = time.time()
+            else:
+                self.response_queue.put("I'm sorry, I couldn't get a clear enough view of your face. We can try enrollment again later.")
+        else:
+            self.response_queue.put("Enrollment failed because I couldn't capture enough images. Please check your camera connection.")
 
     def _process_recognition(self, frame: np.ndarray, current_time: float):
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
