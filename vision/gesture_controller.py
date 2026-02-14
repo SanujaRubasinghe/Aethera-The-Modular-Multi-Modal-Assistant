@@ -45,13 +45,24 @@ class GestureController(threading.Thread):
         # State tracking
         self.last_gesture: Optional[str] = None
         self.gesture_start_time = 0
-        self.prev_landmarks = None
+        self.timestamp = 0
     
-    def _internal_callback(self):
-        pass
+    def _internal_callback(self, result, output_image, timestamp_ms):
+        if result.hand_landmarks:
+            for i, hand_landmarks in enumerate(result.hand_landmarks):
+                landmarks = np.array([[lm.x, lm.y, lm.z] for lm in hand_landmarks], dtype=np.float32)
+                
+                handedness = "Left" if result.handedness[i][0].category_name == "Right" else "Right"
+                gesture = self.classifier.classify_gesture(landmarks, hand_label=handedness)
+                
+                if gesture:
+                    self._handle_gesture(gesture)
+                    break # Handle one hand at a time
+        else:
+            self.last_gesture = None
 
     def _load_mappings(self) -> Dict[str, Any]:
-        mapping_path = "config/gesture_mappings.json"
+        mapping_path = "vision/gesture_mappings/gesture_mappings.json"
         if os.path.exists(mapping_path):
             with open(mapping_path, 'r') as f:
                 return json.load(f)
@@ -77,36 +88,18 @@ class GestureController(threading.Thread):
         print("GestureController: Thread stopped")
 
     def _process_gesture(self, frame: np.ndarray):
-        # Convert to RGB for MediaPipe
-        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        results = self.hands.process(rgb_frame)
-
-        if results.multi_hand_landmarks:
-            for hand_landmarks in results.multi_hand_landmarks:
-                # Convert landmarks to list of (x,y,z)
-                landmarks = [[lm.x, lm.y, lm.z] for lm in hand_landmarks.landmark]
-                
-                # Classify
-                gesture = self.classifier.classify_gesture(landmarks, self.prev_landmarks)
-                self.prev_landmarks = landmarks
-                
-                if gesture:
-                    self._handle_gesture(gesture)
-                    break # Handle one hand at a time
-        else:
-            self.last_gesture = None
-            self.prev_landmarks = None
+        self.timestamp += 1
+        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame)
+        self.hands.detect_async(mp_image, self.timestamp)
 
     def _handle_gesture(self, gesture: str):
-        """Debounce and dispatch intents."""
         current_time = time.time() * 1000
 
         if gesture == self.last_gesture:
             duration = current_time - self.gesture_start_time
             if duration >= GESTURE_DEBOUNCE_MS:
                 self._dispatch_gesture_intent(gesture)
-                # Reset start time to avoid rapid repeated firing
-                self.gesture_start_time = current_time + 1000 # 1s cooldown
+                self.gesture_start_time = current_time + 1000 
         else:
             self.last_gesture = gesture
             self.gesture_start_time = current_time
