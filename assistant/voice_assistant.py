@@ -19,15 +19,13 @@ import threading
 import time
 import queue
 
-from config.constants import FIRST_BOOT_RESPONSES
-import random
 
 class VoiceAssistant:
     def __init__(self):
         self.intent_queue = queue.Queue()
         self.response_queue = queue.Queue()
 
-        first_boot_response = random.choice(FIRST_BOOT_RESPONSES)
+        first_boot_response = "Starting up. Diagnostics in progress."
         self.response_queue.put(first_boot_response)
         
         self.wake_event = threading.Event()
