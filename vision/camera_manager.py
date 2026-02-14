@@ -35,10 +35,37 @@ class CameraManager(threading.Thread):
 
     def run(self):
         print(f"CameraManager: Starting capture on source {self.source}")
-        cap = cv2.VideoCapture(self.source)
         
-        if not cap.isOpened():
-            print("CameraManager: Failed to open camera.")
+        backends = [
+            ("Default", None),
+            ("DSHOW", cv2.CAP_DSHOW),
+            ("MSMF", cv2.CAP_MSMF),
+        ]
+        
+        cap = None
+        for name, backend in backends:
+            print(f"CameraManager: Trying backend {name}...")
+            if backend is None:
+                cap = cv2.VideoCapture(self.source)
+            else:
+                cap = cv2.VideoCapture(self.source, backend)
+            
+            if cap.isOpened():
+                ret, _ = cap.read()
+                if ret:
+                    print(f"CameraManager: Successfully opened camera with {name} backend.")
+                    break
+                else:
+                    print(f"CameraManager: {name} backend opened but failed to read frame.")
+                    cap.release()
+                    cap = None
+            else:
+                print(f"CameraManager: {name} backend failed to open.")
+                cap.release()
+                cap = None
+
+        if cap is None or not cap.isOpened():
+            print("CameraManager: Failed to open camera with all attempted backends.")
             self.available = False
             self.ready_event.set()
             print("CameraManager [STOPPED]")
