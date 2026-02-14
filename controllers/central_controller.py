@@ -23,6 +23,7 @@ class CentralController(threading.Thread):
                     self.response_queue.put("Access denied. Owner not recognized.")
                     continue
 
+                self.response_queue.put("On it!")
                 result = self.dispatcher.dispatch(intent, self.response_queue)
                 if result and result.message:
                     self.response_queue.put(result.message)

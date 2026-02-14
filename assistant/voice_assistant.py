@@ -57,7 +57,8 @@ class VoiceAssistant:
         #     intent_queue=self.intent_queue,
         #     shutdown_event=self.shutdown_event
         # )
-        self.security_gate = SecurityGate(state=self.state, camera=self.vision_manager)
+        self.security_gate = SecurityGate(state=self.state, camera=self.vision_manager, response_queue=self.response_queue)
+
         
         # Inject security gate into controller
         # TODO: CentralController needs update to check security_gate.allow(intent)

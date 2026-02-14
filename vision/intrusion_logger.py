@@ -35,27 +35,31 @@ class IntrusionLogger:
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         photo_filename = f"intruder_{timestamp}.jpg"
         photo_path = os.path.join(self.data_dir, photo_filename)
-        
-        # Save photo
-        cv2.imwrite(photo_path, frame)
-        
-        # Log entry
-        entry = {
-            "timestamp": datetime.now().isoformat(),
-            "photo_path": photo_path,
-            "reviewed": False
-        }
-        
         try:
+            # Refresh directory just in case
+            if not os.path.exists(self.data_dir):
+                os.makedirs(self.data_dir, exist_ok=True)
+            
+            # Save photo
+            cv2.imwrite(photo_path, frame)
+            
+            # Log entry
+            entry = {
+                "timestamp": datetime.now().isoformat(),
+                "photo_path": photo_path,
+                "reviewed": False
+            }
+            
             with open(self.log_file, 'r+') as f:
                 logs = json.load(f)
                 logs.append(entry)
                 f.seek(0)
                 json.dump(logs, f, indent=2)
                 f.truncate()
-            print(f"IntrusionLogger: Logged attempt at {timestamp}")
+            print(f"IntrusionLogger: Logged intrusion at {timestamp}")
         except Exception as e:
             print(f"IntrusionLogger: Error saving log: {e}")
+
 
     def get_unreviewed_count(self) -> int:
         try:
@@ -78,5 +82,5 @@ class IntrusionLogger:
             print(f"IntrusionLogger: Error marking logs reviewed: {e}")
 
     def clear_old_logs(self):
-        # Implementation for retention cleanup
+        # Later old records should be deleted after a set date.
         pass

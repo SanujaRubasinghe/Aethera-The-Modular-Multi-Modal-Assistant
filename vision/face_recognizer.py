@@ -158,4 +158,4 @@ class FaceRecognizer(threading.Thread):
                     if current_time - self.last_auth_time > AUTH_TIMEOUT_SECONDS:
                         print("FaceRecognizer: Authentication timed out.")
                         self.state.is_authenticated = False
-                        self.response_queue.put("Access locked. Face not recognized.")
+                        self.response_queue.put("Access locked. Owner presence not detected.")
