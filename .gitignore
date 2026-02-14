@@ -1,6 +1,6 @@
 windows_app_alias_cache.json
 windows_app_cache.json
-test.py
+tests/
 vision/face_encodings/
 data/intrusion
 *.jpg

@@ -14,8 +14,8 @@ class WindowsAppIndexer:
 
     def __init__(
         self,
-        app_cache_file="windows_app_cache.json",
-        alias_file="windows_app_aliases.json",
+        app_cache_file="./cache/windows_app_cache.json",
+        alias_file="./cache/windows_app_aliases.json",
     ):
         self.app_cache_file = app_cache_file
         self.alias_file = alias_file
