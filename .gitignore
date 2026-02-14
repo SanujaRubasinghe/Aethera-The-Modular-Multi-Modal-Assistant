@@ -3,6 +3,7 @@ windows_app_cache.json
 test.py
 vision/face_encodings/
 data/intrusion
+*.jpg
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

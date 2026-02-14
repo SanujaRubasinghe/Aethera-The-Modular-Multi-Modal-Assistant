@@ -149,7 +149,7 @@ class FaceRecognizer(threading.Thread):
             if matched:
                 if not self.state.is_authenticated:
                     print("FaceRecognizer: Owner recognized!")
-                    self.response_queue.put("Welcome back, Sanuja.")
+                    self.response_queue.put("Welcome back, Sir!.")
                 self.state.is_authenticated = True
                 self.last_auth_time = current_time
             else:
