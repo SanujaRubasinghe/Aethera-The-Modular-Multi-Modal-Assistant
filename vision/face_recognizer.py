@@ -17,12 +17,14 @@ from config.constants import (
 )
 
 class FaceRecognizer(threading.Thread):
-    def __init__(self, camera: CameraManager, state: AssistantState, response_queue: queue.Queue, shutdown_event: threading.Event):
+    def __init__(self, camera: CameraManager, state: AssistantState, response_queue: queue.Queue, shutdown_event: threading.Event, security_gate=None):
         super().__init__(daemon=True)
         self.camera = camera
         self.state = state
         self.response_queue = response_queue
         self.shutdown_event = shutdown_event
+        self.security_gate = security_gate
+
         
         self.known_encodings = []
         self._load_known_faces()
@@ -126,7 +128,6 @@ class FaceRecognizer(threading.Thread):
     def _process_recognition(self, frame: np.ndarray, current_time: float):
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         
-        # Scale down for faster processing (0.5 is a better balance than 0.25)
         small_frame = cv2.resize(rgb_frame, (0, 0), fx=0.5, fy=0.5)
         
         face_locations = face_recognition.face_locations(small_frame)
@@ -134,7 +135,6 @@ class FaceRecognizer(threading.Thread):
 
         matched = False
         if not self.known_encodings:
-            # If no owner enrolled, default to authenticated to avoid locking the user out
             with self.state._lock:
                 self.state.is_authenticated = True
             return
@@ -150,12 +150,17 @@ class FaceRecognizer(threading.Thread):
                 if not self.state.is_authenticated:
                     print("FaceRecognizer: Owner recognized!")
                     self.response_queue.put("Welcome back, Sir!.")
+                    if self.security_gate:
+                        print("FaceRecognizer: Checking for any intrusion reports...")
+                        self.security_gate.check_and_report_intrusions()
                 self.state.is_authenticated = True
+
                 self.last_auth_time = current_time
             else:
-                # Check for timeout if no match found (either stranger or no face)
                 if self.state.is_authenticated:
                     if current_time - self.last_auth_time > AUTH_TIMEOUT_SECONDS:
                         print("FaceRecognizer: Authentication timed out.")
                         self.state.is_authenticated = False
                         self.response_queue.put("Access locked. Owner presence not detected.")
+                        if self.security_gate:
+                            self.security_gate.lock_workstation()

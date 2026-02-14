@@ -23,8 +23,9 @@ class SecurityGate:
 
         # Always allow if authenticated
         if self.state.is_authenticated:
-            self._check_and_report_intrusions()
+            self.check_and_report_intrusions()
             return True
+
 
         # Exemptions
         if intent.name in ["WAKE_ASSISTANT", "FACE_RECOG_STATUS"]:
@@ -44,14 +45,14 @@ class SecurityGate:
         
         # Handle OS lock if enabled
         if LOCK_ON_UNAUTHORIZED:
-            self._lock_workstation()
+            self.lock_workstation()
 
         return False
 
-    def _check_and_report_intrusions(self):
-        """Called when owner returns."""
+    def check_and_report_intrusions(self):
         if self.state.pending_intrusion_report:
             count = self.logger.get_unreviewed_count()
+            print(f"SecurityGate: Found {count} unreviewed intrusion attempts.")
             if count > 0:
                 msg = f"Security Alert: There were {count} intrusion attempts while you were away."
                 print(f"SecurityGate: {msg}")
@@ -62,7 +63,7 @@ class SecurityGate:
             self.state.pending_intrusion_report = False
             self.logger.mark_all_reviewed()
 
-    def _lock_workstation(self):
+    def lock_workstation(self):
         """Platform dependent lock."""
         try:
             ctypes.windll.user32.LockWorkStation()

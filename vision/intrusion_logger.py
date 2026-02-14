@@ -66,7 +66,8 @@ class IntrusionLogger:
             with open(self.log_file, 'r') as f:
                 logs = json.load(f)
                 return sum(1 for log in logs if not log.get("reviewed", False))
-        except:
+        except Exception as e:
+            print(f"Error reading log file: {e}")
             return 0
 
     def mark_all_reviewed(self):
@@ -74,7 +75,7 @@ class IntrusionLogger:
             with open(self.log_file, 'r+') as f:
                 logs = json.load(f)
                 for log in logs:
-                    log["reviewed"] = True
+                    log["reviewed"] = 1
                 f.seek(0)
                 json.dump(logs, f, indent=2)
                 f.truncate()

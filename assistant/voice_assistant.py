@@ -42,23 +42,19 @@ class VoiceAssistant:
 
         self.vision_manager = CameraManager(shutdown_event=self.shutdown_event)
         from vision.face_recognizer import FaceRecognizer
-        # from vision.gesture_controller import GestureController
         from vision.security_gate import SecurityGate
-
+        # from vision.gesture_controller import GestureController
+        self.security_gate = SecurityGate(state=self.state, camera=self.vision_manager, response_queue=self.response_queue)
+        
         self.face_recognizer = FaceRecognizer(
             camera=self.vision_manager,
             state=self.state,
             response_queue=self.response_queue,
-            shutdown_event=self.shutdown_event
+            shutdown_event=self.shutdown_event,
+            security_gate=self.security_gate
         )
-        # self.gesture_controller = GestureController(
-        #     camera=self.vision_manager,
-        #     state=self.state,
-        #     intent_queue=self.intent_queue,
-        #     shutdown_event=self.shutdown_event
-        # )
-        self.security_gate = SecurityGate(state=self.state, camera=self.vision_manager, response_queue=self.response_queue)
 
+        # Gesture recognizer should be here
         
         # Inject security gate into controller
         # TODO: CentralController needs update to check security_gate.allow(intent)
@@ -97,7 +93,6 @@ class VoiceAssistant:
         self.vision_manager.start()
         
         # Wait for camera to initialize and check availability
-        # Increased timeout to 8 seconds for slower systems or multiple backend attempts
         print("VoiceAssistant: Waiting for camera initialization...")
         self.vision_manager.ready_event.wait(timeout=8.0)
         self.state.update_module_status("vision", self.vision_manager.available)
