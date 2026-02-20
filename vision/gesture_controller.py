@@ -3,7 +3,6 @@ import queue
 import time
 import json
 import os
-import cv2
 import mediapipe as mp
 from mediapipe.tasks.python import vision
 from mediapipe.tasks import python
@@ -50,7 +49,7 @@ class GestureController(threading.Thread):
     def _internal_callback(self, result, output_image, timestamp_ms):
         if result.hand_landmarks:
             for i, hand_landmarks in enumerate(result.hand_landmarks):
-                landmarks = np.array([[lm.x, lm.y, lm.z] for lm in hand_landmarks], dtype=np.float32)
+                landmarks = [[lm.x, lm.y, lm.z] for lm in hand_landmarks]
                 
                 handedness = "Left" if result.handedness[i][0].category_name == "Right" else "Right"
                 gesture = self.classifier.classify_gesture(landmarks, hand_label=handedness)
