@@ -4,6 +4,6 @@ sounddevice
 webrtcvad
 faster-whisper
 torch
-# kokoro-tts # assuming this is installed or provided elsewhere as it was imported
+kokoro-tts 
 tk
 Pillow

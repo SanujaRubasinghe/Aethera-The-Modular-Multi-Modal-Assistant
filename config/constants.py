@@ -12,7 +12,7 @@ N8N_WEBHOOK_URL="http://localhost:5678/webhook/voice-assistant"
 
 # LLM Constants
 DEFAULT_OLLAMA_URL = "http://localhost:11434/api/generate"
-DEFAULT_LLM_MODEL = "gemma3:4b"
+DEFAULT_LLM_MODEL = "llama3.2:3b"
 
 # Vision constants
 CAMERA_FPS=30

@@ -1,7 +1,7 @@
 # Aethera: The Modular Multi-Modal Assistant
 
-> [!CAUTION]
-> **Project Under Development**: Aethera is currently in active development. Core vision and visual components are being implemented. Early preview stage.
+> [!NOTE]
+> **Vision Update**: Aethera's vision core (FaceID & Gesture Control) is now integrated and functional. Enrollment is automated on first run.
 
 **Aethera** is a premium multi-modal assistant merging local LLM intelligence with computer vision. Experience advanced voice control, biometric face security with intrusion logging, and a 22-gesture library for touchless OS navigation. Reactive 3D visuals and n8n automation make it a powerful, privacy-first hub for modern Windows workflows.
 
@@ -16,10 +16,10 @@
 - **Proactive Context**: Real-time awareness of active applications and OS state.
 
 ### 👁️ Integrated Vision System
-- **Face Recognition Security**: Biometric "Security Gate" that greets you and blocks unauthorized access.
-- **Intrusion Detection**: Captures photos of unauthorized users and reports them upon your return.
-- **Gesture Control**: 22+ custom gestures for touchless control of Windows, media, and navigation.
-- **MediaPipe Powered**: Real-time hand landmark tracking with robust heuristic classification.
+- **Biometric Security Gate**: Advanced face recognition that authenticates the owner and blocks unauthorized intents.
+- **Automated Enrollment**: A guided 5-step process to learn your face during the first session.
+- **Intrusion Protection**: Automatically logs and photographs unauthorized users, reporting attempts upon the owner's return.
+- **22-Gesture Library**: Comprehensive MediaPipe-powered gesture control for full OS and media management.
 
 ### ⚙️ Automation & Control
 - **n8n Integration**: Trigger complex multi-step workflows directly via voice or gesture.
@@ -27,6 +27,10 @@
 - **Plugin System**: Easily add new capabilities by dropping in new `BaseHandler` modules.
 
 ### 🎨 Visual Experience
+
+> [!NOTE]
+> **Visuals Under Development**: The 3D particle sphere and Modular Dashboard are currently in early development. UI elements and performance are being actively optimized.
+
 - **Particle Sphere Aura**: A speech-reactive 3D particle sphere that visualizes the assistant's state.
 - **Modular Dashboard**: A crisp, functional Tkinter control panel for managing apps, macros, and vision settings.
 
@@ -44,7 +48,8 @@ graph TB
     subgraph VisionLayer ["Vision Layer"]
         CM --> FR[Face Recognizer]
         CM --> GC[Gesture Controller]
-        CM --> IL[Intrusion Logger]
+        CM --> SG[Security Gate]
+        SG --> IL[Intrusion Logger]
     end
 
     subgraph CoreLayer ["Core"]
@@ -52,6 +57,7 @@ graph TB
         GC -->|Intent| CC
         FR -->|Auth State| CC
         CC --> TD[Task Dispatcher]
+        SG -.->|Intercept| CC
     end
 
     subgraph OutputLayer ["Output Layer"]
@@ -93,19 +99,40 @@ graph TB
 
 ---
 
+## 👤 FaceID Enrollment
+On the first launch, Aethera will detect that no owner data exists and initiate a guided enrollment:
+1. **Preparation**: You will be asked to look at the camera.
+2. **Capture**: Aethera takes 5 photos to create a robust biometric profile.
+3. **Processing**: Your profile is saved locally as an encrypted encoding (`face_data.pkl`).
+4. **Active Protection**: Once enrolled, the "Security Gate" will greet you and allow access to commands only when you are present.
+
+---
+
 ## 🖱️ Gesture Guide
-Aethera supports 22+ gestures organized into 4 categories:
-- **Assistant Control**: Wake, Stop, Confirm/Deny.
-- **Cursor & Navigation**: Air mouse, Scroll, Zoom.
-- **OS Control**: Switch Desktops, Maximize/Minimize, Start Menu.
-- **Media & System**: Volume, Brightness, Screenshot, Mute.
+Aethera supports 22+ gestures organized into 4 logical categories:
+
+> [!IMPORTANT]
+> **Work in Progress**: Gesture categories and mappings are currently being refined and are subject to change as the heuristic engine evolves.
+
+| Category | Gestures | Action |
+| :--- | :--- | :--- |
+| **Assistant** | `open_palm`, `fist` | Wake / Stop Assistant |
+| | `thumbs_up`, `thumbs_down` | Confirm (Yes) / Deny (No) |
+| **Navigation** | `point`, `pinch`, `pinch_drag` | Move Cursor / Click / Drag |
+| | `spread`, `pinch_close` | Zoom In / Zoom Out |
+| **OS Control** | `swipe_left/right`, `l_shape` | Switch Desktop / Minimize |
+| | `raise_the_roof`, `finger_gun` | Maximize / Open Start Menu |
+| | `two_hand_scale` | Resize Window |
+| **Media/System**| `swipe_up/down`, `victory` | Volume Control / Screenshot |
+| | `rotate_cw/ccw`, `ok_sign` | Brightness Control / Mute |
+| | `three_fingers` | Play / Pause Media |
 
 ---
 
 ## 🔒 Security & Privacy
-- **Local First**: All voice processing (STT/LLM) and vision processing (FaceID/Gestures) happens locally on your machine.
-- **Biometric Locking**: Optional "Security Gate" that can lock your Windows workstation if an unauthorized person is detected.
-- **Intrusion Logs**: Photos of unauthorized access attempts are stored in `data/intrusions/` and presented to the owner upon return.
+- **Local Biometrics**: FaceID data and Hand tracking are processed 100% locally. No images are sent to the cloud.
+- **Intrusion Reporting**: If an unauthorized person attempts to use Aethera, it logs the event, takes a photo, and safely locks Windows.
+- **Audit Logs**: Access intrusion records and photos in `data/intrusions/` via the Modular Dashboard.
 
 ---
 
