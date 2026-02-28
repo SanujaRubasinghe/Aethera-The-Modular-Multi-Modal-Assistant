@@ -1,5 +1,8 @@
 # Aethera: The Modular Multi-Modal Assistant
 
+> [!CAUTION]
+> **Project Under Development**: Aethera is in active development. Features are being added rapidly, and breaking changes may occur. This is an early preview.
+
 > [!NOTE]
 > **Vision Update**: Aethera's vision core (FaceID & Gesture Control) is now integrated and functional. Enrollment is automated on first run.
 
