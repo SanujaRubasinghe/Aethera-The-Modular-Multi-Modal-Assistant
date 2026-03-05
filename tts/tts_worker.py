@@ -4,6 +4,7 @@ import torch
 import sounddevice as sd
 from kokoro import KPipeline
 import numpy as np
+from server.websocket_server import ws_server
 
 class TTSWorker(threading.Thread):
     def __init__(self, wake_event, shutdown_event, response_queue):
@@ -57,6 +58,7 @@ class TTSWorker(threading.Thread):
             with self._lock:
                 self._stop_requested = False
                 self.wake_event.clear()
+                ws_server.broadcast('state', 'speaking')
 
             try:
                 segments = self.pipeline(text, voice="af_bella")
@@ -66,6 +68,8 @@ class TTSWorker(threading.Thread):
                     self._play_interruptible(audio_tensor)
             except Exception as e:
                 print(f"TTSWorker ERROR: {e}")
+            finally:
+                ws_server.broadcast('state', 'idle')
 
             self.response_queue.task_done()
 

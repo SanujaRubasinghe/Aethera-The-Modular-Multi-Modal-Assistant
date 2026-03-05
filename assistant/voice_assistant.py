@@ -13,6 +13,7 @@ from controllers.permission_manager import PermissionManager
 from vision.camera_manager import CameraManager
 from state.assistant_state import AssistantState
 from state.bootstrap import bootstrap_existing_apps
+from server.websocket_server import ws_server
 import handlers
 
 import threading
@@ -113,12 +114,15 @@ class VoiceAssistant:
             self.state.update_module_status("face_recognition", True)
             self.state.update_module_status("gesture_control", True) 
 
+        ws_thread = threading.Thread(target=ws_server.start, daemon=True)
+        ws_thread.start()
+
         wake_thread.start()
         stt_thread.start()
         self.tts_worker.start()
         self.controller.start()
         
-        self.threads = [wake_thread, stt_thread]
+        self.threads = [wake_thread, stt_thread, ws_thread]
         print("\nVoice Assistant started.")
 
     def stop(self):

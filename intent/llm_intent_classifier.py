@@ -1,7 +1,7 @@
 import requests
 import json
 import logging
-from typing import List, Dict, Any, Optional
+from typing import Optional
 from intent.intent_classifier import Intent
 from config.constants import DEFAULT_OLLAMA_URL, DEFAULT_LLM_MODEL
 

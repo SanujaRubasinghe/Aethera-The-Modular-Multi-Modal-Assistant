@@ -8,6 +8,7 @@ from faster_whisper import WhisperModel
 from intent.intent_classifier import RuleBasedIntentClassifier
 
 import config.constants as consts
+from server.websocket_server import ws_server
 
 class WhisperSTT:
     def __init__(self, wake_event, shutdown_event, intent_queue, response_queue):
@@ -30,6 +31,11 @@ class WhisperSTT:
             return
         pcm16 = (indata[:, 0] * 32768).astype(np.int16).tobytes()
         self.audio_queue.put(pcm16)
+        
+        # Calculate level for UI
+        rms = np.sqrt(np.mean(indata**2))
+        level = min(1.0, rms * 10) # Simple scaling
+        ws_server.broadcast('audio_level', level)
 
     def listen(self):
         print("WhisperSTT [IDLE]")
@@ -42,6 +48,7 @@ class WhisperSTT:
 
             self.wake_event.clear()
             print("WhisperSTT [LISTENING]")
+            ws_server.broadcast('state', 'listening')
 
             self._run_stt_session()
         print("WhisperSTT [SHUTDOWN]")
@@ -71,13 +78,16 @@ class WhisperSTT:
                     last_voice_time = time.time()
                 else:
                     if time.time() - last_voice_time >= consts.SILENCE_TIMEOUT:
+                        ws_server.broadcast('state', 'processing')
                         break
         
         if not speech_frames:
             print("No speech detected, returning to [IDLE]")
+            ws_server.broadcast('state', 'idle')
             return
         
         self._process_whisper(speech_frames)
+        ws_server.broadcast('state', 'idle')
 
     def _process_whisper(self, frames):
         audio_bytes = b"".join(frames)
