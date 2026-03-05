@@ -26,6 +26,8 @@ You have access to the following tools (intents):
 3. **SYSTEM_HEALTH_CHECK**: Use this when the user asks about the status, health, or performance of the assistant or its modules.
    - No slots required.
 
+4. **INTRODUCE_SELF**: Use this when the user asks "Who are you?", "What is your name?", or "Tell me about yourself".
+   - No slots required.
 Output strictly JSON. Do not output markdown or explanations.
 Example 1: "Send a message to John saying I'll be late"
 {
