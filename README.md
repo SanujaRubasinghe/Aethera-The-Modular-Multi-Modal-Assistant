@@ -8,6 +8,8 @@
 
 **Aethera** is a premium multi-modal assistant merging local LLM intelligence with computer vision. Experience advanced voice control, biometric face security with intrusion logging, and a 22-gesture library for touchless OS navigation. Reactive 3D visuals and n8n automation make it a powerful, privacy-first hub for modern Windows workflows.
 
+![Aethera Interface Showcase](./assets/aethera-gif.gif)
+
 ---
 
 ## ✨ Key Features
@@ -30,12 +32,8 @@
 - **Plugin System**: Easily add new capabilities by dropping in new `BaseHandler` modules.
 
 ### 🎨 Visual Experience
-
-> [!NOTE]
-> **Visuals Under Development**: The 3D particle sphere and Modular Dashboard are currently in early development. UI elements and performance are being actively optimized.
-
 - **Particle Sphere Aura**: A speech-reactive 3D particle sphere that visualizes the assistant's state.
-- **Modular Dashboard**: A crisp, functional Tkinter control panel for managing apps, macros, and vision settings.
+- **Modular Dashboard**: A crisp, functional React control panel for managing apps, macros, and vision settings.
 
 ---
 
