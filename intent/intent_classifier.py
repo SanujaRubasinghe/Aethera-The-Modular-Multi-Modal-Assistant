@@ -98,6 +98,13 @@ class RuleBasedIntentClassifier:
             ("CHECK_EMAIL", re.compile(r"\bcheck(?:\s+\w+)*\s+emails?\b", re.IGNORECASE)),
             ("SEARCH_WEB", re.compile(r"\b(search for|look up|search|find)\s+(?P<query>.+)", re.IGNORECASE)), # working
             ("SET_VOLUME", re.compile(r"\b(set volume|volume)\s+(to\s+)?(?P<level>\d+)", re.IGNORECASE)),
+            ("INCREASE_VOLUME", re.compile(r"\b(increase|raise|turn up)\s+(the\s+)?volume\b", re.IGNORECASE)),
+            ("DECREASE_VOLUME", re.compile(r"\b(decrease|lower|turn down)\s+(the\s+)?volume\b", re.IGNORECASE)),
+            ("MUTE_VOLUME", re.compile(r"\b(mute)\s+(the\s+)?(volume|sound|audio)\b", re.IGNORECASE)),
+            ("UNMUTE_VOLUME", re.compile(r"\b(unmute)\s+(the\s+)?(volume|sound|audio)\b", re.IGNORECASE)),
+            ("GET_VOLUME", re.compile(r"\b(what('s)?|what is|get)\s+(the\s+)?(current\s+)?volume\b", re.IGNORECASE)),
+            ("MOVE_WINDOW_LEFT", re.compile(r"\b(move|shift)\s+(this\s+|the\s+)?window\s+to\s+(the\s+)?(left|next|other)\b", re.IGNORECASE)),
+            ("MOVE_WINDOW_RIGHT", re.compile(r"\b(move|shift)\s+(this\s+|the\s+)?window\s+to\s+(the\s+)?(right|main|primary)\b", re.IGNORECASE)),
             ("MINIMIZE_APP", re.compile(r"\b(minimize)\s+(?P<app_name>.+)", re.IGNORECASE)),
             ("TAKE_SCREENSHOT", re.compile(
                 r"\b("

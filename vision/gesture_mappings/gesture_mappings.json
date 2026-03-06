@@ -67,16 +67,12 @@
     "mode": "continuous"
   },
   "swipe_up": {
-    "intent": "VOLUME_CHANGE",
-    "slots": {
-      "direction": "up"
-    }
+    "intent": "INCREASE_VOLUME",
+    "slots": {}
   },
   "swipe_down": {
-    "intent": "VOLUME_CHANGE",
-    "slots": {
-      "direction": "down"
-    }
+    "intent": "DECREASE_VOLUME",
+    "slots": {}
   },
   "victory": {
     "intent": "TAKE_SCREENSHOT",
