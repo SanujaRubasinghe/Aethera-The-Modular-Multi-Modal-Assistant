@@ -8,7 +8,7 @@
 
 **Aethera** is a premium multi-modal assistant merging local LLM intelligence with computer vision. Experience advanced voice control, biometric face security with intrusion logging, and a 22-gesture library for touchless OS navigation. Reactive 3D visuals and n8n automation make it a powerful, privacy-first hub for modern Windows workflows.
 
-![Aethera Interface Showcase](./assets/aethera-gif-loop.gif)
+![Aethera Interface Showcase](./assets/aethera-gif-ezgif.com-loop-count.gif)
 
 ---
 
