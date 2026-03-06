@@ -17,7 +17,7 @@
 ### 🎙️ Advanced Voice System
 - **Intelligent Intent Recognition**: Powered by local LLMs (Ollama/llama3) for natural language understanding.
 - **Whisper STT**: High-accuracy, low-latency speech-to-text using Faster-Whisper.
-- **Neural TTS**: Expressive text-to-speech with multiple backend support (Kokoro/pyttsx3).
+- **Neural TTS**: Expressive text-to-speech with multiple backend support (Kokoro).
 - **Proactive Context**: Real-time awareness of active applications and OS state.
 
 ### 👁️ Integrated Vision System
