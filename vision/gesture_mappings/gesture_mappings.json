@@ -1,27 +1,105 @@
 {
-  "open_palm":       { "intent": "WAKE_ASSISTANT",   "slots": {} },
-  "fist":            { "intent": "STOP_ACTION",       "slots": {} },
-  "thumbs_up":       { "intent": "CONFIRM_YES",       "slots": {} },
-  "thumbs_down":     { "intent": "CONFIRM_NO",        "slots": {} },
-
-  "point":           { "intent": "CURSOR_MOVE",       "slots": {}, "mode": "continuous" },
-  "pinch":           { "intent": "CLICK_SELECT",      "slots": {} },
-  "pinch_drag":      { "intent": "CLICK_DRAG",        "slots": {}, "mode": "continuous" },
-  "spread":          { "intent": "ZOOM",              "slots": {"direction": "in"} },
-  "pinch_close":     { "intent": "ZOOM",              "slots": {"direction": "out"} },
-
-  "swipe_left":      { "intent": "SWITCH_DESKTOP",    "slots": {"direction": "left"} },
-  "swipe_right":     { "intent": "SWITCH_DESKTOP",    "slots": {"direction": "right"} },
-  "l_shape":         { "intent": "MINIMIZE_WINDOW",   "slots": {} },
-  "raise_the_roof":  { "intent": "MAXIMIZE_WINDOW",   "slots": {} },
-  "finger_gun":      { "intent": "OPEN_START_MENU",   "slots": {} },
-  "two_hand_scale":  { "intent": "RESIZE_WINDOW",     "slots": {}, "mode": "continuous" },
-
-  "swipe_up":        { "intent": "VOLUME_CHANGE",     "slots": {"direction": "up"} },
-  "swipe_down":      { "intent": "VOLUME_CHANGE",     "slots": {"direction": "down"} },
-  "victory":         { "intent": "TAKE_SCREENSHOT",   "slots": {} },
-  "rotate_cw":       { "intent": "BRIGHTNESS_CHANGE", "slots": {"direction": "up"} },
-  "rotate_ccw":      { "intent": "BRIGHTNESS_CHANGE", "slots": {"direction": "down"} },
-  "three_fingers":   { "intent": "MEDIA_PLAY_PAUSE",  "slots": {} },
-  "ok_sign":         { "intent": "TOGGLE_MUTE",       "slots": {} }
+  "open_palm": {
+    "intent": "WAKE_ASSISTANT",
+    "slots": {}
+  },
+  "fist": {
+    "intent": "STOP_ACTION",
+    "slots": {}
+  },
+  "thumbs_up": {
+    "intent": "CONFIRM_YES",
+    "slots": {}
+  },
+  "thumbs_down": {
+    "intent": "CONFIRM_NO",
+    "slots": {}
+  },
+  "point": {
+    "intent": "CURSOR_MOVE",
+    "slots": {},
+    "mode": "continuous"
+  },
+  "pinch": {
+    "intent": "CLICK_SELECT",
+    "slots": {}
+  },
+  "pinch_drag": {
+    "intent": "CLICK_DRAG",
+    "slots": {},
+    "mode": "continuous"
+  },
+  "spread": {
+    "intent": "ZOOM",
+    "slots": {
+      "direction": "in"
+    }
+  },
+  "pinch_close": {
+    "intent": "ZOOM",
+    "slots": {
+      "direction": "out"
+    }
+  },
+  "swipe_left": {
+    "intent": "MOVE_WINDOW_LEFT",
+    "slots": {}
+  },
+  "swipe_right": {
+    "intent": "MOVE_WINDOW_RIGHT",
+    "slots": {}
+  },
+  "l_shape": {
+    "intent": "MINIMIZE_WINDOW",
+    "slots": {}
+  },
+  "raise_the_roof": {
+    "intent": "MAXIMIZE_WINDOW",
+    "slots": {}
+  },
+  "finger_gun": {
+    "intent": "OPEN_START_MENU",
+    "slots": {}
+  },
+  "two_hand_scale": {
+    "intent": "RESIZE_WINDOW",
+    "slots": {},
+    "mode": "continuous"
+  },
+  "swipe_up": {
+    "intent": "VOLUME_CHANGE",
+    "slots": {
+      "direction": "up"
+    }
+  },
+  "swipe_down": {
+    "intent": "VOLUME_CHANGE",
+    "slots": {
+      "direction": "down"
+    }
+  },
+  "victory": {
+    "intent": "TAKE_SCREENSHOT",
+    "slots": {}
+  },
+  "rotate_cw": {
+    "intent": "BRIGHTNESS_CHANGE",
+    "slots": {
+      "direction": "up"
+    }
+  },
+  "rotate_ccw": {
+    "intent": "BRIGHTNESS_CHANGE",
+    "slots": {
+      "direction": "down"
+    }
+  },
+  "three_fingers": {
+    "intent": "MEDIA_PLAY_PAUSE",
+    "slots": {}
+  },
+  "ok_sign": {
+    "intent": "TOGGLE_MUTE",
+    "slots": {}
+  }
 }
