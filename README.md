@@ -15,7 +15,7 @@
 ## ✨ Key Features
 
 ### 🧠 Agent-First Conversational AI
-- **Natural Conversation**: Powered by a LangChain agent (`qwen2.5:14b` via Ollama) — multi-turn context, reasoning, and natural responses.
+- **Natural Conversation**: Powered by a LangChain agent (`qwen2.5:3b` via Ollama) — multi-turn context, reasoning, and natural responses.
 - **18 Built-in Tools**: The agent decides when to call tools (open apps, control volume, search the web, etc.) through reasoning — not regex matching.
 - **Streaming TTS**: Responses stream sentence-by-sentence to Kokoro TTS, reducing perceived latency.
 - **Episodic & Profile Memory**: Persistent SQLite memory stores conversation history and user preferences across sessions.
