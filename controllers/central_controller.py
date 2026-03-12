@@ -1,8 +1,6 @@
 import queue
 import threading
 
-# TODO: Implement a dispatch queue as well. Modify the code accordingly
-
 class CentralController(threading.Thread):
     def __init__(self, intent_queue, resposne_queue, dispatcher, shutdown_event, security_gate=None):
         super().__init__(daemon=True)
