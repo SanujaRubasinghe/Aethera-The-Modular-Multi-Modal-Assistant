@@ -4,9 +4,9 @@
 > **Project Under Development**: Aethera is in active development. Features are being added rapidly, and breaking changes may occur. This is an early preview.
 
 > [!NOTE]
-> **Vision Update**: Aethera's vision core (FaceID & Gesture Control) is now integrated and functional. Enrollment is automated on first run.
+> **Agent-First Architecture**: Aethera now uses a unified LangChain agent as its single brain. Every utterance — voice or typed — flows through the LLM agent, which decides whether to converse naturally or invoke tools. No more regex intent matching.
 
-**Aethera** is a premium multi-modal assistant merging local LLM intelligence with computer vision. Experience advanced voice control, biometric face security with intrusion logging, and a 22-gesture library for touchless OS navigation. Reactive 3D visuals and n8n automation make it a powerful, privacy-first hub for modern Windows workflows.
+**Aethera** is a premium multi-modal assistant merging local LLM intelligence with computer vision. Experience natural voice conversation with tool-calling, biometric face security with intrusion logging, and a 22-gesture library for touchless OS navigation. Reactive 3D visuals and n8n automation make it a powerful, privacy-first hub for modern Windows workflows.
 
 ![Aethera Interface Showcase](./assets/aethera-gif-ezgif.com-loop-count.gif)
 
@@ -14,22 +14,27 @@
 
 ## ✨ Key Features
 
+### 🧠 Agent-First Conversational AI
+- **Natural Conversation**: Powered by a LangChain agent (`qwen2.5:14b` via Ollama) — multi-turn context, reasoning, and natural responses.
+- **18 Built-in Tools**: The agent decides when to call tools (open apps, control volume, search the web, etc.) through reasoning — not regex matching.
+- **Streaming TTS**: Responses stream sentence-by-sentence to Kokoro TTS, reducing perceived latency.
+- **Episodic & Profile Memory**: Persistent SQLite memory stores conversation history and user preferences across sessions.
+
 ### 🎙️ Advanced Voice System
-- **Intelligent Intent Recognition**: Powered by local LLMs (Ollama/llama3) for natural language understanding.
-- **Whisper STT**: High-accuracy, low-latency speech-to-text using Faster-Whisper.
-- **Neural TTS**: Expressive text-to-speech with multiple backend support (Kokoro).
-- **Proactive Context**: Real-time awareness of active applications and OS state.
+- **Whisper STT**: High-accuracy, low-latency speech-to-text using Faster-Whisper (medium.en, CUDA).
+- **Neural TTS**: Expressive text-to-speech via Kokoro with interruptible playback.
+- **Wake Word Detection**: "Computer" keyword detection via Porcupine for hands-free activation.
 
 ### 👁️ Integrated Vision System
-- **Biometric Security Gate**: Advanced face recognition that authenticates the owner and blocks unauthorized intents.
+- **Biometric Security Gate**: Face recognition authenticates the owner and blocks unauthorized commands.
 - **Automated Enrollment**: A guided 5-step process to learn your face during the first session.
 - **Intrusion Protection**: Automatically logs and photographs unauthorized users, reporting attempts upon the owner's return.
 - **22-Gesture Library**: Comprehensive MediaPipe-powered gesture control for full OS and media management.
 
 ### ⚙️ Automation & Control
 - **n8n Integration**: Trigger complex multi-step workflows directly via voice or gesture.
-- **OS Automation**: Direct control over Windows volume, brightness, and applications.
-- **Plugin System**: Easily add new capabilities by dropping in new `BaseHandler` modules.
+- **OS Automation**: Direct control over Windows volume, applications, screenshots, window management.
+- **Tool-Based Extensibility**: Add new capabilities by defining `@tool`-decorated functions in `tools/`.
 
 ### 🎨 Visual Experience
 - **Particle Sphere Aura**: A speech-reactive 3D particle sphere that visualizes the assistant's state.
@@ -42,8 +47,10 @@
 ```mermaid
 graph TB
     subgraph InputLayer ["Input Layer"]
-        Mic[Microphone] --> STT[Whisper STT]
+        Mic[Microphone] --> WW[Wake Word / Porcupine]
+        WW --> STT[Whisper STT]
         Cam[Camera] --> CM[Camera Manager]
+        Term[Terminal Input] --> TQ[text_queue]
     end
 
     subgraph VisionLayer ["Vision Layer"]
@@ -53,24 +60,50 @@ graph TB
         SG --> IL[Intrusion Logger]
     end
 
-    subgraph CoreLayer ["Core"]
-        STT -->|Intent| CC[Central Controller]
-        GC -->|Intent| CC
-        FR -->|Auth State| CC
-        CC --> TD[Task Dispatcher]
-        SG -.->|Intercept| CC
+    subgraph AgentCore ["Agent Core"]
+        STT -->|raw text| TQ
+        GC -->|natural language| TQ
+        TQ --> AW[Agent Worker]
+        SG -.- AW
+        AW --> Agent[AetheraAgent / LangChain]
+        Agent --> Tools[18 LangChain Tools]
+        Agent --> Mem[AetheraMemory / SQLite]
     end
 
     subgraph OutputLayer ["Output Layer"]
-        TD --> Handlers[Modular Handlers]
-        Handlers -->|Webhook| n8n[n8n Automation]
-        Handlers -->|TTS| NeuralTTS[Neural TTS]
-        Handlers -->|UI| Vis[Particle Sphere UI]
+        Agent -->|streaming sentences| RQ[response_queue]
+        RQ --> TTS[Kokoro TTS]
+        Tools -->|Webhook| n8n[n8n Automation]
+        RQ -->|UI State| WS[WebSocket Server]
+        WS --> Vis[Particle Sphere UI]
     end
 
-    S[AssistantState] --- CoreLayer
+    S[AssistantState] --- AgentCore
     S --- VisionLayer
 ```
+
+---
+
+## 🔧 Available Tools
+
+The agent has access to 18 tools that it invokes by reasoning:
+
+| Tool | Description |
+| :--- | :--- |
+| `open_app` | Launch any Windows application by name |
+| `close_app` | Close an app (by name or the focused one) |
+| `search_web` | Google search |
+| `set_volume` / `increase_volume` / `decrease_volume` | Volume control |
+| `mute_volume` / `unmute_volume` / `get_volume` | Mute/unmute/query |
+| `get_weather` | Current weather via n8n |
+| `check_email` | Email summary via n8n |
+| `take_screenshot` | Screenshot (primary, all, or specific monitor) |
+| `read_screen` | Describe screen content using SmolVLM |
+| `system_health_check` | Check all module and service status |
+| `move_window` | Move window between monitors |
+| `trigger_n8n` | Trigger any n8n automation workflow |
+| `remember_user_preference` | Store user preferences |
+| `recall_user_preference` | Recall stored preferences |
 
 ---
 
@@ -78,8 +111,9 @@ graph TB
 
 ### Prerequisites
 - Python 3.10+
-- [Ollama](https://ollama.ai/) with `llama3` installed.
+- [Ollama](https://ollama.ai/) with `qwen2.5:14b` installed.
 - Windows 10/11.
+- NVIDIA GPU with CUDA (recommended for Whisper + TTS + LLM).
 - Webcam and Microphone.
 
 ### Installation
@@ -92,10 +126,13 @@ graph TB
    ```bash
    pip install -r requirements.txt
    ```
-3. Set up `.env`:
-   ```env
-   N8N_WEBHOOK_URL=http://localhost:5678/webhook/voice-assistant
-   OLLAMA_URL=http://localhost:11434/api/generate
+3. Pull the LLM model:
+   ```bash
+   ollama pull qwen2.5:14b
+   ```
+4. Run the assistant:
+   ```bash
+   python -m assistant.voice_assistant
    ```
 
 ---
@@ -138,15 +175,16 @@ Aethera supports 22+ gestures organized into 4 logical categories:
 ---
 
 ## 🛠️ Development
-Adding a new command is as simple as creating a new file in `handlers/`:
+Adding a new tool is as simple as creating a `@tool`-decorated function:
 
 ```python
-from handlers.base_handler import BaseHandler
+from langchain_core.tools import tool
 
-class MyNewHandler(BaseHandler):
-    INTENT_NAME = "MY_CUSTOM_INTENT"
-    
-    def handle(self, intent, state, permission_manager):
-        # Your logic here
-        return TaskResult(True, "Command executed successfully!")
+@tool
+def my_custom_tool(param: str) -> str:
+    """Description of what this tool does — the agent reads this to decide when to call it."""
+    # Your logic here
+    return "Result message"
 ```
+
+Add it to the `ALL_TOOLS` list in `tools/system_tools.py` and the agent will automatically have access to it.

@@ -3,123 +3,191 @@ import warnings
 warnings.filterwarnings('ignore')
 torch.backends.cudnn.benchmark = True
 
+import threading
+import time
+import queue
+
 from wakeword.wake_word_detection import WakeWordDetector
 from stt.whisper_stt import WhisperSTT
 from tts.tts_worker import TTSWorker
-from controllers.central_controller import CentralController
-from controllers.task_dispatcher import TaskDispatcher
-from controllers.handler_loader import load_handlers
-from controllers.permission_manager import PermissionManager
 from vision.camera_manager import CameraManager
 from state.assistant_state import AssistantState
 from state.bootstrap import bootstrap_existing_apps
 from server.websocket_server import ws_server
 from assistant.terminal_input import TerminalInput
-import handlers
 
-import threading
-import time
-import queue
+from core.agent.AetheraAgent import AetheraAgent
+from core.memory.AetheraMemory import AetheraMemory
+from tools.system_tools import ALL_TOOLS, set_assistant_state
+from tools.memory_tools import MEMORY_TOOLS, set_memory
+
+
+class AgentWorker(threading.Thread):
+    """
+    Pulls raw text from text_queue, sends it to AetheraAgent,
+    and streams sentences into response_queue for TTS.
+    """
+
+    def __init__(self, agent: AetheraAgent, text_queue: queue.Queue,
+                 response_queue: queue.Queue, shutdown_event: threading.Event,
+                 security_gate=None):
+        super().__init__(daemon=True)
+        self.agent = agent
+        self.text_queue = text_queue
+        self.response_queue = response_queue
+        self.shutdown_event = shutdown_event
+        self.security_gate = security_gate
+
+    def run(self):
+        print("AgentWorker [RUNNING]")
+        while not self.shutdown_event.is_set():
+            try:
+                text = self.text_queue.get(timeout=0.1)
+            except queue.Empty:
+                continue
+
+            if not text:
+                continue
+
+            # Security check (face authentication)
+            if self.security_gate and not self.security_gate.allow(text):
+                self.response_queue.put("Access denied. Owner not recognized.")
+                continue
+
+            ws_server.broadcast('state', 'thinking')
+
+            try:
+                for sentence in self.agent.stream_response(text):
+                    if self.shutdown_event.is_set():
+                        break
+                    self.response_queue.put(sentence)
+            except Exception as e:
+                print(f"AgentWorker ERROR: {e}")
+                self.response_queue.put("I seem to have encountered a difficulty.")
+
+        print("AgentWorker [STOPPED]")
+
 
 
 class VoiceAssistant:
     def __init__(self):
-        self.intent_queue = queue.Queue()
-        self.response_queue = queue.Queue()
+        self.text_queue = queue.Queue()       # raw transcribed text
+        self.response_queue = queue.Queue()   # sentences for TTS
 
         first_boot_response = "Starting up. Diagnostics in progress."
         self.response_queue.put(first_boot_response)
-        
+
         self.wake_event = threading.Event()
         self.shutdown_event = threading.Event()
-        
+
+        # ── State ────────────────────────────────────────────────────
         self.state = AssistantState()
         bootstrap_existing_apps(self.state)
         self.state.sync_focus_from_os()
-        
-        self.permission_manager = PermissionManager(self.intent_queue, self.response_queue, self.wake_event)
-        self.dispatcher = TaskDispatcher(self.state, permission_manager=self.permission_manager)
-        
-        load_handlers(self.dispatcher, handlers)
 
+        # ── Memory & Agent ───────────────────────────────────────────
+        self.memory = AetheraMemory()
+
+        # Inject shared state into tool modules
+        set_assistant_state(self.state)
+        set_memory(self.memory)
+
+        all_tools = ALL_TOOLS + MEMORY_TOOLS
+        self.agent = AetheraAgent(tools=all_tools, memory=self.memory)
+
+        # ── Vision ───────────────────────────────────────────────────
         self.vision_manager = CameraManager(shutdown_event=self.shutdown_event)
         from vision.face_recognizer import FaceRecognizer
         from vision.security_gate import SecurityGate
         from vision.gesture_controller import GestureController
-        self.security_gate = SecurityGate(state=self.state, camera=self.vision_manager, response_queue=self.response_queue)
-        
+
+        self.security_gate = SecurityGate(
+            state=self.state, camera=self.vision_manager,
+            response_queue=self.response_queue,
+        )
         self.face_recognizer = FaceRecognizer(
-            camera=self.vision_manager,
-            state=self.state,
+            camera=self.vision_manager, state=self.state,
             response_queue=self.response_queue,
             shutdown_event=self.shutdown_event,
-            security_gate=self.security_gate
+            security_gate=self.security_gate,
         )
-
         self.gesture_controller = GestureController(
-            camera=self.vision_manager,
-            state=self.state,
-            intent_queue=self.intent_queue,
-            shutdown_event=self.shutdown_event
-        )
-        
-        self.wake_detector = WakeWordDetector(wake_event=self.wake_event, shutdown_event=self.shutdown_event, response_queue=self.response_queue)
-        self.stt_worker = WhisperSTT(wake_event=self.wake_event, shutdown_event=self.shutdown_event, intent_queue=self.intent_queue, response_queue=self.response_queue)
-        
-        self.tts_worker = TTSWorker(wake_event=self.wake_event, response_queue=self.response_queue, shutdown_event=self.shutdown_event)
-        self.controller = CentralController(
-            intent_queue=self.intent_queue, 
-            resposne_queue=self.response_queue, 
-            dispatcher=self.dispatcher, 
+            camera=self.vision_manager, state=self.state,
+            intent_queue=self.text_queue,  # gestures can inject text too
             shutdown_event=self.shutdown_event,
-            security_gate=self.security_gate
         )
 
-        self.terminal_input = TerminalInput(
-            intent_queue=self.intent_queue,
+        # ── Audio pipeline ───────────────────────────────────────────
+        self.wake_detector = WakeWordDetector(
+            wake_event=self.wake_event,
+            shutdown_event=self.shutdown_event,
             response_queue=self.response_queue,
-            shutdown_event=self.shutdown_event
         )
-        
-        # Initial health update
+        self.stt_worker = WhisperSTT(
+            wake_event=self.wake_event,
+            shutdown_event=self.shutdown_event,
+            text_queue=self.text_queue,
+        )
+        self.tts_worker = TTSWorker(
+            wake_event=self.wake_event,
+            response_queue=self.response_queue,
+            shutdown_event=self.shutdown_event,
+        )
+
+        # ── Agent worker (replaces CentralController + Dispatcher) ──
+        self.agent_worker = AgentWorker(
+            agent=self.agent,
+            text_queue=self.text_queue,
+            response_queue=self.response_queue,
+            shutdown_event=self.shutdown_event,
+            security_gate=self.security_gate,
+        )
+
+        # ── Terminal input ───────────────────────────────────────────
+        self.terminal_input = TerminalInput(
+            text_queue=self.text_queue,
+            shutdown_event=self.shutdown_event,
+        )
+
+        # ── Module health ────────────────────────────────────────────
         self.state.update_module_status("wake_word", True)
         self.state.update_module_status("stt", True)
         self.state.update_module_status("tts", True)
-        self.state.update_module_status("central_controller", True)
+        self.state.update_module_status("agent", True)
 
         self.threads = []
 
     def start(self):
         if not self.shutdown_event.is_set() and self.threads:
-             print("Voice Assistant is already running.")
-             return
+            print("Voice Assistant is already running.")
+            return
 
         self.shutdown_event.clear()
         self.wake_event.clear()
-        
+
         wake_thread = threading.Thread(target=self.wake_detector.listen)
         stt_thread = threading.Thread(target=self.stt_worker.listen)
-        
+
         self.vision_manager.start()
-        
-        # Wait for camera to initialize and check availability
+
         print("VoiceAssistant: Waiting for camera initialization...")
         self.vision_manager.ready_event.wait(timeout=8.0)
         self.state.update_module_status("vision", self.vision_manager.available)
-        
+
         if not self.vision_manager.available:
             print("VoiceAssistant: Camera not found. Disabling vision modules.")
-            self.response_queue.put("Warning: Camera module could not be found. Vision features (FaceID, Gestures) are disabled.")
+            self.response_queue.put(
+                "Warning: Camera module could not be found. "
+                "Vision features (FaceID, Gestures) are disabled."
+            )
             self.vision_enabled = False
-            # Disable security gate in controller to prevent lockout
-            self.controller.security_gate = None
         else:
             print("VoiceAssistant: Camera found. Enabling vision modules.")
             self.vision_enabled = True
             self.face_recognizer.start()
             self.gesture_controller.start()
             self.state.update_module_status("face_recognition", True)
-            self.state.update_module_status("gesture_control", True) 
+            self.state.update_module_status("gesture_control", True)
 
         ws_thread = threading.Thread(target=ws_server.start, daemon=True)
         ws_thread.start()
@@ -128,25 +196,22 @@ class VoiceAssistant:
         stt_thread.start()
         self.terminal_input.start()
         self.tts_worker.start()
-        self.controller.start()
-        
+        self.agent_worker.start()
+
         self.threads = [wake_thread, stt_thread, ws_thread]
-        print("\nVoice Assistant started.")
+        print("\nVoice Assistant started. All systems online.")
 
     def stop(self):
         print("Shutting down...\n")
         self.shutdown_event.set()
         self.tts_worker.stop_current()
-        
-
-        # self.tts_worker.join(timeout=0.2)
-        # self.controller.join(timeout=0.2)
         print("\nExited cleanly")
+
 
 if __name__ == "__main__":
     assistant = VoiceAssistant()
     assistant.start()
-    
+
     try:
         while True:
             time.sleep(0.2)

@@ -5,17 +5,23 @@ import webrtcvad
 import sounddevice as sd
 from faster_whisper import WhisperModel
 
-from intent.intent_classifier import RuleBasedIntentClassifier
-
 import config.constants as consts
 from server.websocket_server import ws_server
 
+
 class WhisperSTT:
-    def __init__(self, wake_event, shutdown_event, intent_queue, response_queue):
+    """
+    Speech-to-text worker.
+
+    Waits for the wake event, records speech until silence,
+    transcribes with Whisper, and puts raw text onto the text_queue
+    for the agent to process.
+    """
+
+    def __init__(self, wake_event, shutdown_event, text_queue):
         self.wake_event = wake_event
         self.shutdown_event = shutdown_event
-        self.intent_queue = intent_queue
-        self.response_queue = response_queue
+        self.text_queue = text_queue
 
         # VAD setup
         self.vad = webrtcvad.Vad(consts.VAD_MODE)
@@ -23,18 +29,15 @@ class WhisperSTT:
 
         self.model = WhisperModel("medium.en", device="cuda")
 
-        # intent classifier
-        self.intent_classifier = RuleBasedIntentClassifier(self.response_queue)
-
     def _audio_callback(self, indata, frame, time_info, status):
         if status:
             return
         pcm16 = (indata[:, 0] * 32768).astype(np.int16).tobytes()
         self.audio_queue.put(pcm16)
-        
+
         # Calculate level for UI
         rms = np.sqrt(np.mean(indata**2))
-        level = min(1.0, rms * 10) # Simple scaling
+        level = min(1.0, rms * 10)
         ws_server.broadcast('audio_level', level)
 
     def listen(self):
@@ -62,7 +65,7 @@ class WhisperSTT:
             channels=1,
             blocksize=consts.FRAME_SIZE,
             dtype="float32",
-            callback=self._audio_callback
+            callback=self._audio_callback,
         ):
             while not self.shutdown_event.is_set():
                 try:
@@ -70,7 +73,6 @@ class WhisperSTT:
                 except queue.Empty:
                     continue
 
-                # Checking for VAD
                 is_speech = self.vad.is_speech(frame, consts.SAMPLE_RATE)
 
                 if is_speech:
@@ -80,12 +82,12 @@ class WhisperSTT:
                     if time.time() - last_voice_time >= consts.SILENCE_TIMEOUT:
                         ws_server.broadcast('state', 'processing')
                         break
-        
+
         if not speech_frames:
             print("No speech detected, returning to [IDLE]")
             ws_server.broadcast('state', 'idle')
             return
-        
+
         self._process_whisper(speech_frames)
         ws_server.broadcast('state', 'idle')
 
@@ -98,27 +100,11 @@ class WhisperSTT:
         text = ""
         for segment in segments:
             text += segment.text + " "
+
+        text = text.strip()
         if text:
-            intents = self.intent_classifier.classify(text)
-            
-            # Check for fallback
-            if len(intents) == 1 and intents[0].name == "fallback":
-                print("Regex failed, trying LLM...")
-                try:
-                    from intent.llm_intent_classifier import LLMIntentClassifier
-                    llm_classifier = LLMIntentClassifier() # TODO: Instantiate once in __init__ for performance
-                    llm_intent = llm_classifier.classify(text)
-                    if llm_intent:
-                        print(f"LLM Classification: {llm_intent.name} {llm_intent.slots}")
-                        intents = [llm_intent]
-                except Exception as e:
-                    print(f"LLM Fallback failed: {e}")
-
-            for intent in intents:
-                self.intent_queue.put(intent)
-
-            # intents_json = self.intent_classifier.classify_json(text)
-            # print(intents_json)
-            
+            print(f"WhisperSTT [TRANSCRIBED]: {text}")
+            ws_server.broadcast('transcript', text)
+            self.text_queue.put(text)
         else:
             print("Speech detected but no transcription")

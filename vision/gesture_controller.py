@@ -10,7 +10,6 @@ import numpy as np
 from typing import Optional, Dict, Any
 from vision.camera_manager import CameraManager
 from vision.gesture_classifier import GestureClassifier
-from intent.intent_classifier import Intent
 from config.constants import GESTURE_DEBOUNCE_MS
 
 from state.assistant_state import AssistantState
@@ -20,7 +19,7 @@ class GestureController(threading.Thread):
         super().__init__(daemon=True)
         self.camera = camera
         self.state = state
-        self.intent_queue = intent_queue
+        self.text_queue = intent_queue  # now carries plain text, not Intent objects
         self.shutdown_event = shutdown_event
         self.classifier = GestureClassifier()
         self.model_path = "./vision/gesture_model/hand_landmarker.task"
@@ -108,10 +107,7 @@ class GestureController(threading.Thread):
         if not mapping:
             return
 
-        intent_name = mapping.get("intent")
-        slots = mapping.get("slots", {})
-        
-        print(f"GestureController: Detected {gesture} -> Intent: {intent_name}")
-        
-        intent = Intent(name=intent_name, slots=slots)
-        self.intent_queue.put(intent)
+        # Convert gesture mapping to natural-language command for the agent
+        text_command = mapping.get("text", gesture.replace("_", " "))
+        print(f"GestureController: Detected {gesture} -> Command: {text_command}")
+        self.text_queue.put(text_command)

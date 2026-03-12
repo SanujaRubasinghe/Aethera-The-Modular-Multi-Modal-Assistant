@@ -5,7 +5,6 @@ from typing import Optional
 from state.assistant_state import AssistantState
 from vision.intrusion_logger import IntrusionLogger
 from vision.camera_manager import CameraManager
-from intent.intent_classifier import Intent
 from config.constants import LOCK_ON_UNAUTHORIZED
 
 class SecurityGate:
@@ -16,7 +15,7 @@ class SecurityGate:
         self.logger = IntrusionLogger()
         self.last_reported_count = 0
 
-    def allow(self, intent: Intent) -> bool:
+    def allow(self, user_text: str = "") -> bool:
         # Safety fallback
         if not getattr(self.camera, "available", True):
             return True
@@ -26,13 +25,8 @@ class SecurityGate:
             self.check_and_report_intrusions()
             return True
 
-
-        # Exemptions
-        if intent.name in ["WAKE_ASSISTANT", "FACE_RECOG_STATUS"]:
-            return True
-
         # Blocked
-        print(f"SecurityGate: Blocked intent {intent.name} due to lack of authentication.")
+        print(f"SecurityGate: Blocked command due to lack of authentication.")
         
         # Log intrusion attempt with photo
         frame = self.camera.get_latest_frame()
