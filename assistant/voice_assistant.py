@@ -19,6 +19,7 @@ from assistant.terminal_input import TerminalInput
 
 from core.agent.AetheraAgent import AetheraAgent
 from core.memory.AetheraMemory import AetheraMemory
+from core.proactive_engine.ProactiveEngine import ProactiveEngine
 from tools.system_tools import ALL_TOOLS, set_assistant_state
 from tools.memory_tools import MEMORY_TOOLS, set_memory
 
@@ -62,6 +63,8 @@ class AgentWorker(threading.Thread):
                     if self.shutdown_event.is_set():
                         break
                     self.response_queue.put(sentence)
+                # Mark end of turn for TTS sync
+                self.response_queue.put(None)
             except Exception as e:
                 print(f"AgentWorker ERROR: {e}")
                 self.response_queue.put("I seem to have encountered a difficulty.")
@@ -211,6 +214,14 @@ class VoiceAssistant:
         self.state.update_module_status("tts", True)
         self.state.update_module_status("agent", True)
 
+        # ── Proactive Engine ─────────────────────────────────────────
+        self.proactive_engine = ProactiveEngine(
+            AETHERA=self.agent,
+            response_queue=self.response_queue,
+            shutdown_event=self.shutdown_event,
+        )
+        self.proactive_engine.register_defaults()
+
         self.threads = []
 
     def start(self):
@@ -254,8 +265,9 @@ class VoiceAssistant:
         self.tts_worker.start()
         self.agent_worker.start()
         self.conv_manager.start()
+        self.proactive_engine.start()
 
-        self.threads = [wake_thread, stt_thread, ws_thread, self.conv_manager]
+        self.threads = [wake_thread, stt_thread, ws_thread, self.conv_manager, self.proactive_engine]
         print("\nVoice Assistant started. All systems online.")
 
     def stop(self):

@@ -72,20 +72,32 @@ class TTSWorker(threading.Thread):
         self.pipeline = KPipeline(lang_code="a", device=device)
 
         print("TTSWorker [IDLE]")
+        self.turn_done_event.set()  # Start in idle state
 
         while not self.shutdown_event.is_set():
             try:
-                text = self.response_queue.get(timeout=0.1)
+                item = self.response_queue.get(timeout=0.1)
             except queue.Empty:
                 continue
 
+            if item is None:
+                print("TTSWorker: End-of-Turn marker received")
+                self.turn_done_event.set()
+                self.response_queue.task_done()
+                continue
+            
+            # If we were previously idle, this is the start of a turn
+            if self.turn_done_event.is_set():
+                self.turn_done_event.clear()
+                self.last_response_was_question = False
+
+            text = item
             if not text:
                 continue
 
             with self._lock:
                 self._stop_requested = False
                 self.wake_event.clear()
-                self.turn_done_event.clear()
                 ws_server.broadcast('state', 'speaking')
 
             # Detect if this response is a question (agent-initiated listening)
@@ -93,7 +105,7 @@ class TTSWorker(threading.Thread):
 
             interrupted = False
             try:
-                segments = self.pipeline(text, voice="af_bella")
+                segments = self.pipeline(text, voice="bf_alice")
                 for gs, ps, audio_tensor in segments:
                     if self.shutdown_event.is_set():
                         break
@@ -127,8 +139,6 @@ class TTSWorker(threading.Thread):
                 print("TTSWorker: Interrupted → handing over to STT")
                 if self.conversation_event:
                     self.conversation_event.set()
-            else:
-                # Normal turn end: signal for follow-up
-                 self.turn_done_event.set()
+            # Note: self.turn_done_event is now ONLY set when the 'None' marker is received.
 
         print("TTSWorker [SHUTDOWN]")

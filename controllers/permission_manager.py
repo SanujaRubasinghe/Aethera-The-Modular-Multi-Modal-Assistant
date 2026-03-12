@@ -15,6 +15,7 @@ class PermissionManager:
         
         # Send prompt to TTS
         self.response_queue.put(permission_request.prompt)
+        self.response_queue.put(None)
         
         # Trigger STT to listen for response
         self.wake_event.set()
