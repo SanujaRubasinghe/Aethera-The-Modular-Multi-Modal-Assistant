@@ -15,10 +15,11 @@ from langchain_ollama import ChatOllama
 from langgraph.checkpoint.memory import MemorySaver
 
 from core.memory.AetheraMemory import AetheraMemory
+from config.constants import DEFAULT_LLM_MODEL, DEFAULT_OLLAMA_URL
 
 _llm = ChatOllama(
-    model="qwen2.5:14b",
-    base_url="http://localhost:11434",
+    model=DEFAULT_LLM_MODEL,
+    base_url=DEFAULT_OLLAMA_URL,
     temperature=0.6,
 )
 
@@ -50,7 +51,7 @@ def aethera_system_prompt(request: ModelRequest) -> str:
         "You are Aethera (Just A Rather Very Intelligent System), "
         "a sophisticated AI assistant controlling a Windows machine.\n\n"
         "PERSONALITY:\n"
-        "- Speak with dry, understated British wit — composed and precise\n"
+        "- Speak in only English with dry, understated British wit — composed and precise\n"
         f'- Address the user as "{user_name}"\n'
         '- No filler phrases like "Sure!" or "Of course!" — '
         'use "Understood", "Very well", "Indeed"\n'
@@ -181,6 +182,10 @@ class AetheraAgent:
                     messages = event.get("messages", [])
                     if messages:
                         last = messages[-1]
+                        # Only stream AI messages, otherwise it echoes the user's prompt or tool calls
+                        if getattr(last, "type", "") != "ai":
+                            continue
+
                         content = getattr(last, "content", "") or ""
                         if content and content != full_text:
                             new_chunk = content[len(full_text):]

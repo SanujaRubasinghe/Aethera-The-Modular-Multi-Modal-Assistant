@@ -18,8 +18,8 @@ BARGE_IN_CONSECUTIVE_FRAMES = 5 # number of 30ms frames of speech required to tr
 N8N_WEBHOOK_URL="http://localhost:5678/webhook/voice-assistant"
 
 # LLM Constants
-DEFAULT_OLLAMA_URL = "http://localhost:11434/api/generate"
-DEFAULT_LLM_MODEL = "qwen2.5:14b"
+DEFAULT_OLLAMA_URL = "http://localhost:11434"
+DEFAULT_LLM_MODEL = "qwen2.5:3b"
 
 # Vision constants
 CAMERA_FPS=30

@@ -101,10 +101,14 @@ class ConversationManager(threading.Thread):
             if self.shutdown_event.is_set():
                 break
 
-            # If the response was a question, or we want a follow-up window
-            print(f"ConversationManager: Turn over. Starting follow-up window...")
-            self.conversation_event.set()
-            self.wake_event.set()
+            # If the response was a question, we want a follow-up window
+            if self.tts.last_response_was_question:
+                print(f"ConversationManager: Turn over. Question detected. Starting follow-up window...")
+                self.conversation_event.set()
+                self.wake_event.set()
+            else:
+                # No question detected, do not trigger STT follow-up
+                self.conversation_event.clear()
         
         print("ConversationManager [STOPPED]")
 
