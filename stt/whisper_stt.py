@@ -18,16 +18,19 @@ class WhisperSTT:
     for the agent to process.
     """
 
-    def __init__(self, wake_event, shutdown_event, text_queue):
+    def __init__(self, wake_event, shutdown_event, text_queue, conversation_event=None):
         self.wake_event = wake_event
         self.shutdown_event = shutdown_event
         self.text_queue = text_queue
+        self.conversation_event = conversation_event # Set while in follow-up window
 
         # VAD setup
         self.vad = webrtcvad.Vad(consts.VAD_MODE)
         self.audio_queue = queue.Queue()
 
         self.model = WhisperModel("medium.en", device="cuda")
+
+        self.mode = "WAKE"
 
     def _audio_callback(self, indata, frame, time_info, status):
         if status:
@@ -50,7 +53,10 @@ class WhisperSTT:
                 continue
 
             self.wake_event.clear()
-            print("WhisperSTT [LISTENING]")
+            
+            # If conversation is active, we are listening for a follow-up
+            self.mode = "FOLLOW-UP" if (self.conversation_event and self.conversation_event.is_set()) else "WAKE"
+            print(f"WhisperSTT [LISTENING ({self.mode})]")
             ws_server.broadcast('state', 'listening')
 
             self._run_stt_session()
@@ -58,7 +64,11 @@ class WhisperSTT:
 
     def _run_stt_session(self):
         speech_frames = []
+        start_time = time.time()
         last_voice_time = time.time()
+        
+        # In follow-up mode, we give up faster if no one speaks at all
+        initial_patience = consts.FOLLOW_UP_WINDOW_S if self.mode == "FOLLOW-UP" else 5.0
 
         with sd.InputStream(
             samplerate=consts.SAMPLE_RATE,
@@ -66,7 +76,7 @@ class WhisperSTT:
             blocksize=consts.FRAME_SIZE,
             dtype="float32",
             callback=self._audio_callback,
-        ):
+        ):      
             while not self.shutdown_event.is_set():
                 try:
                     frame = self.audio_queue.get(timeout=0.2)
@@ -79,17 +89,25 @@ class WhisperSTT:
                     speech_frames.append(frame)
                     last_voice_time = time.time()
                 else:
-                    if time.time() - last_voice_time >= consts.SILENCE_TIMEOUT:
+                    # If we haven't heard anything yet and patience runs out
+                    if not speech_frames:
+                        if time.time() - start_time > initial_patience:
+                            print(f"WhisperSTT: No speech detected in {self.mode} window.")
+                            if self.conversation_event:
+                                self.conversation_event.clear()
+                            break
+                    # If we WERE hearing speech but it stopped
+                    elif time.time() - last_voice_time >= consts.SILENCE_TIMEOUT:
                         ws_server.broadcast('state', 'processing')
                         break
 
         if not speech_frames:
-            print("No speech detected, returning to [IDLE]")
             ws_server.broadcast('state', 'idle')
             return
 
         self._process_whisper(speech_frames)
         ws_server.broadcast('state', 'idle')
+
 
     def _process_whisper(self, frames):
         audio_bytes = b"".join(frames)

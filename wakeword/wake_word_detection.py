@@ -19,15 +19,20 @@ class WakeWordDetector:
             frames_per_buffer=self.porcupine.frame_length
         )
 
-    def listen(self):
+    def listen(self, conversation_event=None):
         print("WakeWordDetector [IDLE]")
         while not self.shutdown_event.is_set():
+            # If conversation is active, we don't need to listen for wake word
+            if conversation_event and conversation_event.is_set():
+                time.sleep(0.1)
+                continue
+
             pcm = self.audio_stream.read(self.porcupine.frame_length, exception_on_overflow=False)
             pcm = struct.unpack_from("h" * self.porcupine.frame_length, pcm)
 
             keyword_index = self.porcupine.process(pcm)
             if keyword_index >= 0:
-                print("Yes Sir?")
+                print("WakeWordDetector: Triggered")
                 self.wake_event.set()
                 
                 # Clear existing responses (handle interrupts)
@@ -35,6 +40,7 @@ class WakeWordDetector:
                     self.response_queue.queue.clear()
                 
                 self.response_queue.put("Yes sir?")
+
         self.stop()
         print("WakeWordDetector [SHUTDOWN]")
 

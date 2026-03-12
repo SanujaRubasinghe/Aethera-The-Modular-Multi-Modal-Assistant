@@ -7,12 +7,19 @@ VAD_MODE = 2
 
 # TTS constants
 
+# Conversation flow constants
+FOLLOW_UP_WINDOW_S = 6         # seconds to keep listening after TTS finishes
+BARGE_IN_ECHO_GUARD_S = 0.3   # ignore mic briefly after TTS stops (echo suppression)
+BARGE_IN_SETTLE_S = 0.5       # ignore mic briefly after TTS starts playback
+BARGE_IN_CONSECUTIVE_FRAMES = 5 # number of 30ms frames of speech required to trigger
+
+
 # n8n webhook url
 N8N_WEBHOOK_URL="http://localhost:5678/webhook/voice-assistant"
 
 # LLM Constants
 DEFAULT_OLLAMA_URL = "http://localhost:11434/api/generate"
-DEFAULT_LLM_MODEL = "llama3.2:3b"
+DEFAULT_LLM_MODEL = "qwen2.5:14b"
 
 # Vision constants
 CAMERA_FPS=30

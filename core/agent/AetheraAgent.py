@@ -72,18 +72,22 @@ def aethera_system_prompt(request: ModelRequest) -> str:
 def _build_agent(tools: list):
     checkpointer = MemorySaver()
 
-    summarization = SummarizationMiddleware(
-        model=_llm,
-        trigger=("tokens", 8000),
-        keep=("tokens", 2000),
-    )
+    # summarization = SummarizationMiddleware(
+    #     model=_llm,
+    #     trigger={"tokens": 8000},
+    #     keep={"messages": 20},
+    # )
 
     agent = create_agent(
         model=_llm,
         tools=tools,
         middleware=[
             aethera_system_prompt,
-            summarization,
+            SummarizationMiddleware(
+                model=_llm,
+                trigger=("tokens", 4000),
+                keep=("messages", 20),
+            ),
         ],
         context_schema=AetheraContext,
         checkpointer=checkpointer,

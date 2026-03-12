@@ -69,6 +69,45 @@ class AgentWorker(threading.Thread):
 
 
 
+
+class ConversationManager(threading.Thread):
+    """
+    Coordinates the natural flow:
+    1. Watches for TTS to finish a turn.
+    2. After a brief guard delay, triggers the follow-up window (wake_event + conversation_event).
+    3. Manages the conversation state.
+    """
+    def __init__(self, tts_worker: TTSWorker, wake_event: threading.Event, 
+                 shutdown_event: threading.Event, conversation_event: threading.Event):
+        super().__init__(daemon=True)
+        self.tts = tts_worker
+        self.wake_event = wake_event
+        self.shutdown_event = shutdown_event
+        self.conversation_event = conversation_event
+
+    def run(self):
+        print("ConversationManager [RUNNING]")
+        while not self.shutdown_event.is_set():
+            # Wait for TTS to finish a turn
+            if not self.tts.turn_done_event.wait(timeout=0.5):
+                continue
+            
+            self.tts.turn_done_event.clear()
+            
+            # Brief guard to avoid hearing own echo
+            time.sleep(consts.BARGE_IN_ECHO_GUARD_S)
+            
+            if self.shutdown_event.is_set():
+                break
+
+            # If the response was a question, or we want a follow-up window
+            print(f"ConversationManager: Turn over. Starting follow-up window...")
+            self.conversation_event.set()
+            self.wake_event.set()
+        
+        print("ConversationManager [STOPPED]")
+
+
 class VoiceAssistant:
     def __init__(self):
         self.text_queue = queue.Queue()       # raw transcribed text
@@ -79,6 +118,7 @@ class VoiceAssistant:
 
         self.wake_event = threading.Event()
         self.shutdown_event = threading.Event()
+        self.conversation_event = threading.Event() # Set during follow-up windows
 
         # ── State ────────────────────────────────────────────────────
         self.state = AssistantState()
@@ -127,11 +167,21 @@ class VoiceAssistant:
             wake_event=self.wake_event,
             shutdown_event=self.shutdown_event,
             text_queue=self.text_queue,
+            conversation_event=self.conversation_event
         )
         self.tts_worker = TTSWorker(
             wake_event=self.wake_event,
             response_queue=self.response_queue,
             shutdown_event=self.shutdown_event,
+            conversation_event=self.conversation_event
+        )
+
+        # ── Flow Coordination ──
+        self.conv_manager = ConversationManager(
+            tts_worker=self.tts_worker,
+            wake_event=self.wake_event,
+            shutdown_event=self.shutdown_event,
+            conversation_event=self.conversation_event
         )
 
         # ── Agent worker (replaces CentralController + Dispatcher) ──
@@ -142,6 +192,7 @@ class VoiceAssistant:
             shutdown_event=self.shutdown_event,
             security_gate=self.security_gate,
         )
+
 
         # ── Terminal input ───────────────────────────────────────────
         self.terminal_input = TerminalInput(
@@ -165,7 +216,7 @@ class VoiceAssistant:
         self.shutdown_event.clear()
         self.wake_event.clear()
 
-        wake_thread = threading.Thread(target=self.wake_detector.listen)
+        wake_thread = threading.Thread(target=self.wake_detector.listen, args=(self.conversation_event,))
         stt_thread = threading.Thread(target=self.stt_worker.listen)
 
         self.vision_manager.start()
@@ -197,8 +248,9 @@ class VoiceAssistant:
         self.terminal_input.start()
         self.tts_worker.start()
         self.agent_worker.start()
+        self.conv_manager.start()
 
-        self.threads = [wake_thread, stt_thread, ws_thread]
+        self.threads = [wake_thread, stt_thread, ws_thread, self.conv_manager]
         print("\nVoice Assistant started. All systems online.")
 
     def stop(self):
