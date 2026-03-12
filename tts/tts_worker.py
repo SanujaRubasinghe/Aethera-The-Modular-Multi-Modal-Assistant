@@ -105,7 +105,7 @@ class TTSWorker(threading.Thread):
 
             interrupted = False
             try:
-                segments = self.pipeline(text, voice="bf_alice")
+                segments = self.pipeline(text, voice="af_bella")
                 for gs, ps, audio_tensor in segments:
                     if self.shutdown_event.is_set():
                         break

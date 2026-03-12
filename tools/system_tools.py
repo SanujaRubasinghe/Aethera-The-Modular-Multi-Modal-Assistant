@@ -5,6 +5,7 @@ Each function replaces the corresponding handler class. The agent
 decides when to call them via natural-language reasoning — no regex
 intent classification needed.
 """
+
 from __future__ import annotations
 
 import logging
@@ -24,7 +25,11 @@ from app_indexer.windows_app_indexer import WindowsAppIndexer
 from config.constants import N8N_WEBHOOK_URL, DEFAULT_OLLAMA_URL, DEFAULT_LLM_MODEL
 from os_control.win32_app_close import close_app_gracefully
 from os_control.win32_window import get_main_window_for_pid
-from os_control.screenshot import capture_monitor, capture_all_monitors, capture_monitor_for_screen_read
+from os_control.screenshot import (
+    capture_monitor,
+    capture_all_monitors,
+    capture_monitor_for_screen_read,
+)
 
 # ── Shared singletons ────────────────────────────────────────────────
 _app_indexer = WindowsAppIndexer()
@@ -40,6 +45,7 @@ def set_assistant_state(state):
 
 
 # ── App Management ───────────────────────────────────────────────────
+
 
 def _wait_for_window(pid: int, timeout: float = 2.0):
     end = time.time() + timeout
@@ -89,8 +95,12 @@ def open_app(app_name: str) -> str:
         hwnd = _wait_for_window(proc.pid)
         if _assistant_state:
             app = AppProcess(
-                name=app_name, pid=proc.pid, exe_path=path,
-                opened_at=datetime.now(), hwnd=hwnd, focused=True,
+                name=app_name,
+                pid=proc.pid,
+                exe_path=path,
+                opened_at=datetime.now(),
+                hwnd=hwnd,
+                focused=True,
             )
             _assistant_state.register_app(app)
         return f"{app_name} opened successfully."
@@ -101,14 +111,19 @@ def open_app(app_name: str) -> str:
             return "UWP app id missing."
         subprocess.Popen(
             ["explorer.exe", f"shell:AppsFolder\\{aumid}"],
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
         )
         pid = _find_new_process_pid(app_name)
         hwnd = _wait_for_window(pid) if pid else None
         if _assistant_state and pid:
             app = AppProcess(
-                name=app_name, pid=pid, exe_path=aumid,
-                opened_at=datetime.now(), hwnd=hwnd, focused=True,
+                name=app_name,
+                pid=pid,
+                exe_path=aumid,
+                opened_at=datetime.now(),
+                hwnd=hwnd,
+                focused=True,
             )
             _assistant_state.register_app(app)
         return f"{app_name} opened successfully."
@@ -127,12 +142,14 @@ def close_app(app_name: Optional[str] = None) -> str:
 
     if app_name:
         for pid, app in list(_assistant_state.opened_apps.items()):
-            if app.name.lower().strip('.') == app_name.lower():
+            if app.name.lower().strip(".") == app_name.lower():
                 target_app = app
                 target_pid = pid
                 break
     else:
-        target_app = _assistant_state.get_focused_app() or _assistant_state.get_last_opened_app()
+        target_app = (
+            _assistant_state.get_focused_app() or _assistant_state.get_last_opened_app()
+        )
 
     if not target_app:
         return "No application found to close."
@@ -150,10 +167,12 @@ def close_app(app_name: Optional[str] = None) -> str:
 
 # ── Volume Control ───────────────────────────────────────────────────
 
+
 @tool
 def set_volume(level: int) -> str:
     """Set the system volume to a specific percentage (0-100)."""
     from os_control.win32_volume import set_volume as _set
+
     try:
         _set(level)
         return f"Volume set to {level}%."
@@ -165,6 +184,7 @@ def set_volume(level: int) -> str:
 def increase_volume() -> str:
     """Increase the system volume by a step."""
     from os_control.win32_volume import increase_volume as _inc
+
     try:
         new = _inc()
         return f"Volume increased to {new}%."
@@ -176,6 +196,7 @@ def increase_volume() -> str:
 def decrease_volume() -> str:
     """Decrease the system volume by a step."""
     from os_control.win32_volume import decrease_volume as _dec
+
     try:
         new = _dec()
         return f"Volume decreased to {new}%."
@@ -187,6 +208,7 @@ def decrease_volume() -> str:
 def mute_volume() -> str:
     """Mute the system audio."""
     from os_control.win32_volume import mute as _mute
+
     try:
         _mute()
         return "Volume muted."
@@ -198,6 +220,7 @@ def mute_volume() -> str:
 def unmute_volume() -> str:
     """Unmute the system audio."""
     from os_control.win32_volume import unmute as _unmute
+
     try:
         _unmute()
         return "Volume unmuted."
@@ -209,6 +232,7 @@ def unmute_volume() -> str:
 def get_volume() -> str:
     """Get the current system volume level."""
     from os_control.win32_volume import get_volume as _get
+
     try:
         level = _get()
         return f"Current volume is {level}%."
@@ -217,6 +241,7 @@ def get_volume() -> str:
 
 
 # ── Web Search ───────────────────────────────────────────────────────
+
 
 @tool
 def search_web(query: str) -> str:
@@ -229,12 +254,18 @@ def search_web(query: str) -> str:
 
 # ── Weather & Email (via n8n) ────────────────────────────────────────
 
+
 @tool
 def get_weather() -> str:
     """Get the current weather information."""
     try:
         payload = {"intent_name": "GET_WEATHER", "data": ""}
-        resp = requests.post(N8N_WEBHOOK_URL, json=payload, headers={"Content-Type": "application/json"}, timeout=10)
+        resp = requests.post(
+            N8N_WEBHOOK_URL,
+            json=payload,
+            headers={"Content-Type": "application/json"},
+            timeout=10,
+        )
         data = resp.json()
         msg = data.get("message", {})
         return msg.get("content", "Sorry, there was an error retrieving the weather.")
@@ -247,15 +278,23 @@ def check_email() -> str:
     """Check and summarise the user's recent emails."""
     try:
         payload = {"intent_name": "CHECK_EMAIL", "data": ""}
-        resp = requests.post(N8N_WEBHOOK_URL, json=payload, headers={"Content-Type": "application/json"}, timeout=10)
+        resp = requests.post(
+            N8N_WEBHOOK_URL,
+            json=payload,
+            headers={"Content-Type": "application/json"},
+            timeout=10,
+        )
         data = resp.json()
         msg = data.get("message", {})
-        return msg.get("content", "Sorry, there was an error retrieving email information.")
+        return msg.get(
+            "content", "Sorry, there was an error retrieving email information."
+        )
     except Exception as e:
         return f"Email check failed: {e}"
 
 
 # ── Screenshot ───────────────────────────────────────────────────────
+
 
 @tool
 def take_screenshot(monitor: str = "primary") -> str:
@@ -290,6 +329,7 @@ def take_screenshot(monitor: str = "primary") -> str:
 
 # ── Read Screen (VLM) ────────────────────────────────────────────────
 
+
 @tool
 def read_screen() -> str:
     """Describe what is currently visible on the screen using a vision model."""
@@ -302,13 +342,27 @@ def read_screen() -> str:
         config = AutoConfig.from_pretrained(model_id)
         processor = AutoProcessor.from_pretrained(model_id)
 
-        vision_session = onnxruntime.InferenceSession("vision/vlm_model/vision_encoder_q4.onnx")
-        embed_session = onnxruntime.InferenceSession("vision/vlm_model/embed_tokens_q4.onnx")
-        decoder_session = onnxruntime.InferenceSession("vision/vlm_model/decoder_model_merged_q4.onnx")
+        vision_session = onnxruntime.InferenceSession(
+            "vision/vlm_model/vision_encoder_q4.onnx"
+        )
+        embed_session = onnxruntime.InferenceSession(
+            "vision/vlm_model/embed_tokens_q4.onnx"
+        )
+        decoder_session = onnxruntime.InferenceSession(
+            "vision/vlm_model/decoder_model_merged_q4.onnx"
+        )
 
         img = capture_monitor_for_screen_read()
 
-        messages = [{"role": "user", "content": [{"type": "image"}, {"type": "text", "text": "What is on this image?"}]}]
+        messages = [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "image"},
+                    {"type": "text", "text": "What is on this image?"},
+                ],
+            }
+        ]
         prompt = processor.apply_chat_template(messages, add_generation_prompt=True)
         inputs = processor(text=prompt, images=[img], return_tensors="np")
 
@@ -320,8 +374,11 @@ def read_screen() -> str:
 
         batch = inputs["input_ids"].shape[0]
         pkv = {
-            f"past_key_values.{l}.{kv}": np.zeros([batch, num_kv, 0, head_dim], dtype=np.float32)
-            for l in range(n_layers) for kv in ("key", "value")
+            f"past_key_values.{l}.{kv}": np.zeros(
+                [batch, num_kv, 0, head_dim], dtype=np.float32
+            )
+            for l in range(n_layers)
+            for kv in ("key", "value")
         }
 
         input_ids = inputs["input_ids"]
@@ -335,11 +392,21 @@ def read_screen() -> str:
             if img_feat is None:
                 img_feat = vision_session.run(
                     ["image_features"],
-                    {"pixel_values": inputs["pixel_values"], "pixel_attention_mask": inputs["pixel_attention_mask"].astype(np.bool_)},
+                    {
+                        "pixel_values": inputs["pixel_values"],
+                        "pixel_attention_mask": inputs["pixel_attention_mask"].astype(
+                            np.bool_
+                        ),
+                    },
                 )[0]
-                emb[inputs["input_ids"] == img_tok] = img_feat.reshape(-1, img_feat.shape[-1])
+                emb[inputs["input_ids"] == img_tok] = img_feat.reshape(
+                    -1, img_feat.shape[-1]
+                )
 
-            logits, *pkv_out = decoder_session.run(None, dict(inputs_embeds=emb, attention_mask=attn, position_ids=pos, **pkv))
+            logits, *pkv_out = decoder_session.run(
+                None,
+                dict(inputs_embeds=emb, attention_mask=attn, position_ids=pos, **pkv),
+            )
             input_ids = logits[:, -1].argmax(-1, keepdims=True)
             attn = np.ones_like(input_ids)
             pos = pos[:, -1:] + 1
@@ -355,7 +422,12 @@ def read_screen() -> str:
 
         # Send to n8n for richer response
         payload = {"intent_name": "READ_SCREEN", "data": text}
-        resp = requests.post(N8N_WEBHOOK_URL, json=payload, headers={"Content-Type": "application/json"}, timeout=10)
+        resp = requests.post(
+            N8N_WEBHOOK_URL,
+            json=payload,
+            headers={"Content-Type": "application/json"},
+            timeout=10,
+        )
         data = resp.json()
         msg = data.get("message", {})
         return msg.get("content", text)
@@ -367,6 +439,7 @@ def read_screen() -> str:
 
 # ── System Health ────────────────────────────────────────────────────
 
+
 @tool
 def system_health_check() -> str:
     """Check the health of all voice assistant modules and services."""
@@ -374,7 +447,9 @@ def system_health_check() -> str:
 
     llm_ok = False
     try:
-        r = requests.get(DEFAULT_OLLAMA_URL.replace("/api/generate", "/api/tags"), timeout=2)
+        r = requests.get(
+            DEFAULT_OLLAMA_URL.replace("/api/generate", "/api/tags"), timeout=2
+        )
         llm_ok = r.status_code == 200
     except Exception:
         pass
@@ -402,6 +477,7 @@ def system_health_check() -> str:
 
 # ── Window Management ───────────────────────────────────────────────
 
+
 @tool
 def move_window(direction: str) -> str:
     """Move the currently focused window to another monitor.
@@ -426,19 +502,30 @@ def move_window(direction: str) -> str:
             return "No foreground window found."
 
         class RECT(ctypes.Structure):
-            _fields_ = [("left", ctypes.c_long), ("top", ctypes.c_long),
-                        ("right", ctypes.c_long), ("bottom", ctypes.c_long)]
+            _fields_ = [
+                ("left", ctypes.c_long),
+                ("top", ctypes.c_long),
+                ("right", ctypes.c_long),
+                ("bottom", ctypes.c_long),
+            ]
 
         work_areas = []
+
         def callback(hMon, hdc, lprc, data):
             info = win32api.GetMonitorInfo(hMon)
             work_areas.append(info["Work"])
             return True
 
         user32.EnumDisplayMonitors(
-            0, 0,
-            ctypes.WINFUNCTYPE(ctypes.c_int, wintypes.HMONITOR, wintypes.HDC,
-                               ctypes.POINTER(RECT), wintypes.LPARAM)(callback),
+            0,
+            0,
+            ctypes.WINFUNCTYPE(
+                ctypes.c_int,
+                wintypes.HMONITOR,
+                wintypes.HDC,
+                ctypes.POINTER(RECT),
+                wintypes.LPARAM,
+            )(callback),
             0,
         )
 
@@ -462,6 +549,7 @@ def move_window(direction: str) -> str:
 
 # ── n8n Workflow Trigger ─────────────────────────────────────────────
 
+
 @tool
 def trigger_n8n(workflow: str, parameters: Optional[dict] = None) -> str:
     """Trigger an n8n automation workflow by name.
@@ -477,13 +565,119 @@ def trigger_n8n(workflow: str, parameters: Optional[dict] = None) -> str:
         resp = requests.post(N8N_WEBHOOK_URL, json=payload, timeout=10)
         resp.raise_for_status()
         data = resp.json()
-        return data.get("speech", data.get("message", "Workflow executed successfully."))
+        return data.get(
+            "speech", data.get("message", "Workflow executed successfully.")
+        )
     except requests.exceptions.RequestException as e:
         logging.error(f"n8n request failed: {e}")
         return "Failed to connect to the automation server."
     except Exception as e:
         logging.error(f"n8n handler error: {e}")
         return "An error occurred while executing the automation."
+
+
+# terminal tools
+@tool
+def run_terminal_command(command: str, timeout: int = 15) -> str:
+    """Run any shell command and return its output.
+    Use for git commands, package installs, scripts, diagnostics.
+
+    Args:
+        command: The shell command to execute
+        timeout: Max seconds to wait (default 15)
+    """
+    result = subprocess.run(
+        command, shell=True, capture_output=True, text=True, timeout=timeout
+    )
+    output = result.stdout or result.stderr
+    return output[:1000] if output else "Command completed with no outputs."
+
+
+@tool
+def manage_startup_apps(action: str, app_name: str = "") -> str:
+    """View or manage Windows startup applications.
+
+    Args:
+        action:   'list', 'enable', or 'disable'
+        app_name: App to enable/disable (not needed for 'list')
+    """
+    import winreg
+
+    key_path = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Run"
+
+    if action == "list":
+        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path)
+        apps = []
+        try:
+            i = 0
+            while True:
+                apps.append(winreg.EnumValue(key, i)[0])
+                i += 1
+        except OSError:
+            pass
+        return "Startup apps: " + ", ".join(apps)
+
+    elif action == "disable":
+        key = winreg.OpenKey(
+            winreg.HKEY_CURRENT_USER, key_path, 0, winreg.KEY_SET_VALUE
+        )
+        winreg.DeleteValue(key, app_name)
+        return f"Removed {app_name} from startup."
+
+
+@tool
+def control_mouse_keyboard(action: str, value: str = "", x: int = 0, y: int = 0) -> str:
+    """Control mouse and keyboard for GUI automation.
+    Use when no direct API exists and JARVIS needs to interact with a UI.
+
+    Args:
+        action: 'click', 'type', 'hotkey', 'move', 'scroll'
+        value:  Text to type or hotkey combo e.g. 'ctrl+c'
+        x:      X coordinate for mouse actions
+        y:      Y coordinate for mouse actions
+    """
+    import pyautogui
+
+    pyautogui.FAILSAFE = True
+
+    if action == "click":
+        pyautogui.click(x, y)
+    elif action == "type":
+        pyautogui.typewrite(value, interval=0.05)
+    elif action == "hotkey":
+        keys = value.split("+")
+        pyautogui.hotkey(*keys)
+    elif action == "move":
+        pyautogui.moveTo(x, y, duration=0.3)
+    elif action == "scroll":
+        pyautogui.scroll(int(value))
+
+    return f"Executed {action}."
+
+
+@tool
+def network_info(action: str = "status") -> str:
+    """Get network information or run diagnostics.
+
+    Args:
+        action: 'status', 'ping', 'speed_test', 'connected_devices'
+    """
+    import psutil
+
+    if action == "status":
+        stats = psutil.net_if_stats()
+        active = [name for name, s in stats.items() if s.isup]
+        return f"Active interfaces: {', '.join(active)}"
+
+    elif action == "ping":
+        result = subprocess.run(
+            ["ping", "-n", "3", "8.8.8.8"], capture_output=True, text=True
+        )
+        return result.stdout.split("\n")[-3] if result.stdout else "Ping failed"
+
+    elif action == "connected_devices":
+        result = subprocess.run(["arp", "-a"], capture_output=True, text=True)
+        return result.stdout[:500] if result else "No connected deviced found."
 
 
 # ── Collect all tools ────────────────────────────────────────────────
@@ -505,4 +699,8 @@ ALL_TOOLS = [
     system_health_check,
     move_window,
     trigger_n8n,
+    run_terminal_command,
+    manage_startup_apps,
+    control_mouse_keyboard,
+    network_info,
 ]

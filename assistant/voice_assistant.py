@@ -22,6 +22,9 @@ from core.memory.AetheraMemory import AetheraMemory
 from core.proactive_engine.ProactiveEngine import ProactiveEngine
 from tools.system_tools import ALL_TOOLS, set_assistant_state
 from tools.memory_tools import MEMORY_TOOLS, set_memory
+from tools.notes_tools import NOTE_TOOLS
+from tools.task_tools import TASK_TOOLS
+from tools.notification_tools import NOTIFICATION_TOOLS
 
 
 class AgentWorker(threading.Thread):
@@ -140,7 +143,7 @@ class VoiceAssistant:
         set_assistant_state(self.state)
         set_memory(self.memory)
 
-        all_tools = ALL_TOOLS + MEMORY_TOOLS
+        all_tools = ALL_TOOLS + MEMORY_TOOLS + NOTE_TOOLS + TASK_TOOLS + NOTIFICATION_TOOLS
         self.agent = AetheraAgent(tools=all_tools, memory=self.memory)
 
         # ── Vision ───────────────────────────────────────────────────
