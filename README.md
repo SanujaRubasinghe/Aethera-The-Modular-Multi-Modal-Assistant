@@ -20,6 +20,11 @@
 - **Streaming TTS**: Responses stream sentence-by-sentence to Kokoro TTS, reducing perceived latency.
 - **Episodic & Profile Memory**: Persistent SQLite memory stores conversation history and user preferences across sessions.
 
+### 🌊 Natural Conversation Flow
+- **Follow-up Window**: Automatically listens for 6 seconds after responding — no need to say "Computer" for every turn.
+- **Wake-Word Barge-In**: Interrupt Aethera mid-speech by saying "Computer". The system stops immediately and starts listening.
+- **Continuous Awareness**: Multi-turn context allows for fluid back-and-forth interactions.
+
 ### 🎙️ Advanced Voice System
 - **Whisper STT**: High-accuracy, low-latency speech-to-text using Faster-Whisper (medium.en, CUDA).
 - **Neural TTS**: Expressive text-to-speech via Kokoro with interruptible playback.

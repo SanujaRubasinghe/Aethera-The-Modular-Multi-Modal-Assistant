@@ -20,25 +20,33 @@ class WakeWordDetector:
         )
 
     def listen(self, conversation_event=None):
+        """
+        Always listens for the wake word. 
+        Acts as the barge-in trigger when the agent is speaking.
+        """
         print("WakeWordDetector [IDLE]")
         while not self.shutdown_event.is_set():
-            # If conversation is active, we don't need to listen for wake word
-            if conversation_event and conversation_event.is_set():
-                time.sleep(0.1)
-                continue
+            # NOTE: We no longer pause during conversation mode.
+            # Porcupine is robust enough, and we want "computer" to 
+            # always be able to interrupt or restart.
 
             pcm = self.audio_stream.read(self.porcupine.frame_length, exception_on_overflow=False)
             pcm = struct.unpack_from("h" * self.porcupine.frame_length, pcm)
 
             keyword_index = self.porcupine.process(pcm)
             if keyword_index >= 0:
-                print("WakeWordDetector: Triggered")
+                print("WakeWordDetector: Triggered ('computer')")
+                
+                # Signal for everyone to stop (TTS, AgentWorker)
                 self.wake_event.set()
                 
-                # Clear existing responses (handle interrupts)
+                # Clear existing responses to ensure immediate feedback or silence
                 with self.response_queue.mutex:
                     self.response_queue.queue.clear()
                 
+                # Optional: Feedback for wake word. 
+                # If the user is barging in, they might just want to speak.
+                # However, "Yes sir?" is the current behavior.
                 self.response_queue.put("Yes sir?")
 
         self.stop()
@@ -49,4 +57,3 @@ class WakeWordDetector:
         self.audio_stream.close()
         self.pa.terminate()
         self.porcupine.delete()
-                

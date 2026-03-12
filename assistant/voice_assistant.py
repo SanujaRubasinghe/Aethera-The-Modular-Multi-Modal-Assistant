@@ -6,6 +6,7 @@ torch.backends.cudnn.benchmark = True
 import threading
 import time
 import queue
+import config.constants as consts
 
 from wakeword.wake_word_detection import WakeWordDetector
 from stt.whisper_stt import WhisperSTT
