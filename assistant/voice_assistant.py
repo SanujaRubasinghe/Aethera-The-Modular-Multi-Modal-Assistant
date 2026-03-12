@@ -14,6 +14,7 @@ from vision.camera_manager import CameraManager
 from state.assistant_state import AssistantState
 from state.bootstrap import bootstrap_existing_apps
 from server.websocket_server import ws_server
+from assistant.terminal_input import TerminalInput
 import handlers
 
 import threading
@@ -73,6 +74,12 @@ class VoiceAssistant:
             shutdown_event=self.shutdown_event,
             security_gate=self.security_gate
         )
+
+        self.terminal_input = TerminalInput(
+            intent_queue=self.intent_queue,
+            response_queue=self.response_queue,
+            shutdown_event=self.shutdown_event
+        )
         
         # Initial health update
         self.state.update_module_status("wake_word", True)
@@ -119,6 +126,7 @@ class VoiceAssistant:
 
         wake_thread.start()
         stt_thread.start()
+        self.terminal_input.start()
         self.tts_worker.start()
         self.controller.start()
         
