@@ -19,11 +19,13 @@
 - **18 Built-in Tools**: The agent decides when to call tools (open apps, control volume, search the web, etc.) through reasoning — not regex matching.
 - **Streaming TTS**: Responses stream sentence-by-sentence to Kokoro TTS, reducing perceived latency.
 - **Episodic & Profile Memory**: Persistent SQLite memory stores conversation history and user preferences across sessions.
+- **Proactive Intelligence**: A background engine monitors system events and schedules to initiate conversations (e.g., battery alerts, morning briefings).
 
 ### 🌊 Natural Conversation Flow
-- **Follow-up Window**: Automatically listens for 6 seconds after responding — no need to say "Computer" for every turn.
+- **Question-Aware Follow-up**: Automatically listens for a response *only* when the agent ends a turn with a question.
+- **End-of-Turn Synchronization**: Uses digital "End-of-Turn" markers to ensure the follow-up window starts only after the agent finishes speaking.
 - **Wake-Word Barge-In**: Interrupt Aethera mid-speech by saying "Computer". The system stops immediately and starts listening.
-- **Continuous Awareness**: Multi-turn context allows for fluid back-and-forth interactions.
+- **Echo Prevention**: Intelligent filtering prevents the agent from repeating the user's input before answering.
 
 ### 🎙️ Advanced Voice System
 - **Whisper STT**: High-accuracy, low-latency speech-to-text using Faster-Whisper (medium.en, CUDA).
@@ -68,6 +70,7 @@ graph TB
     subgraph AgentCore ["Agent Core"]
         STT -->|raw text| TQ
         GC -->|natural language| TQ
+        PE[Proactive Engine] -->|system alerts| TQ
         TQ --> AW[Agent Worker]
         SG -.- AW
         AW --> Agent[AetheraAgent / LangChain]
@@ -85,6 +88,7 @@ graph TB
 
     S[AssistantState] --- AgentCore
     S --- VisionLayer
+    PE --- S
 ```
 
 ---
@@ -116,7 +120,7 @@ The agent has access to 18 tools that it invokes by reasoning:
 
 ### Prerequisites
 - Python 3.10+
-- [Ollama](https://ollama.ai/) with `qwen2.5:14b` installed.
+- [Ollama](https://ollama.ai/) with `qwen2.5:3b` installed.
 - Windows 10/11.
 - NVIDIA GPU with CUDA (recommended for Whisper + TTS + LLM).
 - Webcam and Microphone.
@@ -133,7 +137,7 @@ The agent has access to 18 tools that it invokes by reasoning:
    ```
 3. Pull the LLM model:
    ```bash
-   ollama pull qwen2.5:14b
+   ollama pull qwen2.5:3b
    ```
 4. Run the assistant:
    ```bash
