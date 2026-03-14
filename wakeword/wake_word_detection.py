@@ -47,7 +47,7 @@ class WakeWordDetector:
                 # Optional: Feedback for wake word. 
                 # If the user is barging in, they might just want to speak.
                 # However, "Yes sir?" is the current behavior.
-                self.response_queue.put("Yes sir?")
+                self.response_queue.put("Yes sir!")
                 self.response_queue.put(None)
 
         self.stop()

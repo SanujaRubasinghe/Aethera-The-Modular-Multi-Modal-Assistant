@@ -62,10 +62,8 @@ class AgentWorker(threading.Thread):
             ws_server.broadcast('state', 'thinking')
 
             try:
-                for sentence in self.agent.stream_response(text):
-                    if self.shutdown_event.is_set():
-                        break
-                    self.response_queue.put(sentence)
+                response = self.agent.process(text)
+                self.response_queue.put(response)
                 # Mark end of turn for TTS sync
                 self.response_queue.put(None)
             except Exception as e:

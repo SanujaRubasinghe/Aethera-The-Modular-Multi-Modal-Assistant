@@ -16,8 +16,9 @@
 
 ### 🧠 Agent-First Conversational AI
 - **Natural Conversation**: Powered by a LangChain agent (`qwen2.5:3b` via Ollama) — multi-turn context, reasoning, and natural responses.
+- **Expressive Audio Tags**: The agent dynamically integrates auditory tags (e.g., `[laughing]`, `[sighs]`) for realistic and engaging verbal delivery.
 - **18 Built-in Tools**: The agent decides when to call tools (open apps, control volume, search the web, etc.) through reasoning — not regex matching.
-- **Streaming TTS**: Responses stream sentence-by-sentence to Kokoro TTS, reducing perceived latency.
+- **ElevenLabs TTS**: High-quality, expressive text-to-speech with integrated emotional delivery.
 - **Episodic & Profile Memory**: Persistent SQLite memory stores conversation history and user preferences across sessions.
 - **Proactive Intelligence**: A background engine monitors system events and schedules to initiate conversations (e.g., battery alerts, morning briefings).
 
@@ -29,7 +30,7 @@
 
 ### 🎙️ Advanced Voice System
 - **Whisper STT**: High-accuracy, low-latency speech-to-text using Faster-Whisper (medium.en, CUDA).
-- **Neural TTS**: Expressive text-to-speech via Kokoro with interruptible playback.
+- **Premium TTS**: Professional-grade speech via ElevenLabs with support for expressive voice tags.
 - **Wake Word Detection**: "Computer" keyword detection via Porcupine for hands-free activation.
 
 ### 👁️ Integrated Vision System
@@ -79,8 +80,8 @@ graph TB
     end
 
     subgraph OutputLayer ["Output Layer"]
-        Agent -->|streaming sentences| RQ[response_queue]
-        RQ --> TTS[Kokoro TTS]
+        Agent -->|full-response sentences| RQ[response_queue]
+        RQ --> TTS[ElevenLabs TTS]
         Tools -->|Webhook| n8n[n8n Automation]
         RQ -->|UI State| WS[WebSocket Server]
         WS --> Vis[Particle Sphere UI]
@@ -121,8 +122,9 @@ The agent has access to 18 tools that it invokes by reasoning:
 ### Prerequisites
 - Python 3.10+
 - [Ollama](https://ollama.ai/) with `qwen2.5:3b` installed.
+- **ElevenLabs API Key** (Set in `.env`).
 - Windows 10/11.
-- NVIDIA GPU with CUDA (recommended for Whisper + TTS + LLM).
+- NVIDIA GPU with CUDA (recommended for Whisper + LLM).
 - Webcam and Microphone.
 
 ### Installation

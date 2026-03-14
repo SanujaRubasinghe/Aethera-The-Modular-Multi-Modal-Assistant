@@ -6,6 +6,10 @@ data/intrusion
 *.jpg
 *.png
 *.jpeg
+
+aethera_memory.db
+aethera_notes.json
+aethera_tasks.json
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
